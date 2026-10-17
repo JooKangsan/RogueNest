@@ -9,6 +9,10 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.context.annotation.Bean;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -18,15 +22,33 @@ import java.security.Principal;
 @Configuration
 @EnableWebSocketMessageBroker
 public class RoomWebSocketConfig implements WebSocketMessageBrokerConfigurer {
-	private final RoomService roomService;
+	private static final long HEARTBEAT_INTERVAL_MILLIS = 10_000;
 
-	public RoomWebSocketConfig(RoomService roomService) {
+	private final RoomService roomService;
+	private final TaskScheduler brokerTaskScheduler;
+
+	public RoomWebSocketConfig(
+			RoomService roomService,
+			@Qualifier("roomBrokerHeartbeatScheduler") TaskScheduler brokerTaskScheduler
+	) {
 		this.roomService = roomService;
+		this.brokerTaskScheduler = brokerTaskScheduler;
+	}
+
+	@Bean
+	public static ThreadPoolTaskScheduler roomBrokerHeartbeatScheduler() {
+		ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+		scheduler.setPoolSize(1);
+		scheduler.setThreadNamePrefix("stomp-heartbeat-");
+		scheduler.setRemoveOnCancelPolicy(true);
+		return scheduler;
 	}
 
 	@Override
 	public void configureMessageBroker(MessageBrokerRegistry registry) {
-		registry.enableSimpleBroker("/topic", "/queue");
+		registry.enableSimpleBroker("/topic", "/queue")
+				.setTaskScheduler(brokerTaskScheduler)
+				.setHeartbeatValue(new long[]{HEARTBEAT_INTERVAL_MILLIS, HEARTBEAT_INTERVAL_MILLIS});
 		registry.setApplicationDestinationPrefixes("/app");
 		registry.setUserDestinationPrefix("/user");
 		registry.setPreservePublishOrder(true);
