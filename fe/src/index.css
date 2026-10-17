@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&family=Noto+Serif+KR:wght@400;500;600&display=swap');
+
+:root {
+  font-family: 'DM Sans', 'Noto Sans KR', system-ui, sans-serif;
+  color: #343229;
+  background: #f5f2e9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --ink: #343229;
+  --muted: #827d72;
+  --line: #e6e0d4;
+  --rust: #975638;
+  --green: #557c5d;
+  font-optical-sizing: auto;
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradient(ellipse at 14% 8%, rgb(230 219 197 / 25%), transparent 42%), #f5f2e9; }
+button, input, select { font: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #a15e3c; outline-offset: 2px; }
+::selection { color: white; background: #975638; }
