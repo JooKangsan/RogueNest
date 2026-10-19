@@ -612,10 +612,14 @@ class GameFlowTests {
 		assertThat(viewOf(roomName, nicknameOf(witch)).revealedCardId()).isEqualTo("legendary_witch");
 		assertThatThrownBy(() -> roomService.activateCard(witch, roomName, null)).isInstanceOf(RoomException.class);
 
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
 		Thread.sleep(1_000);
 		var roundEnd = roomService.getPublicRoom(roomName);
 		assertThat(roundEnd.phase()).isEqualTo("ROUND_END");
 		assertThat(roundEnd.roundSummary().thiefCaught()).isFalse();
+		// 전원 3G만 받고, 도적은 미검거지만 코인이 없다
+		assertThat(roomService.walletOf(thief)).isEqualTo(new RoomDtos.WalletView(63, 0));
+		assertThat(roomService.walletOf(witch).gold()).isEqualTo(63);
 	}
 
 	@Test

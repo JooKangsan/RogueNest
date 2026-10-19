@@ -592,11 +592,11 @@ public class RoomService {
 			GameRoom.Player target) {
 		switch (effect.action()) {
 			case END_ROUND -> {
-				// 마녀: 즉시 라운드 종료. 도적은 잡히지 않았으므로 미검거로 정산한다.
+				// 마녀: 즉시 라운드 종료. 전원 기본 라운드 종료 골드만 받고 도적 코인은 없다.
 				clearVotes(room);
 				room.trialPlayerIds.clear();
 				room.lastVoteResult = new RoomDtos.VoteResultView("WITCH", List.of(player.nickname));
-				enterPhase(room, "RESULT", voteResultSeconds, () -> endRound(room, false));
+				enterPhase(room, "RESULT", voteResultSeconds, () -> endRound(room, false, true));
 			}
 			case RAIN -> {
 				room.rainTurns = Math.max(room.rainTurns, effect.amount());
@@ -1169,9 +1169,19 @@ public class RoomService {
 	// ---- 라운드 종료 → 다음 라운드 / 게임 종료 ----
 
 	private void endRound(GameRoom room, boolean thiefCaught) {
+		endRound(room, thiefCaught, false);
+	}
+
+	// witchEnded: 마녀로 끝난 라운드. 전원 기본 라운드 종료 골드만 받고, 도적은 미검거여도 코인을 받지 않는다.
+	private void endRound(GameRoom room, boolean thiefCaught, boolean witchEnded) {
 		clearVotes(room);
 		room.trialPlayerIds.clear();
 		for (GameRoom.Player player : room.players.values()) {
+			if (witchEnded) {
+				player.gold += roundEndGold;
+				sendWallet(player);
+				continue;
+			}
 			// 전원(사망자 포함) 라운드 종료 골드. 탐관오리는 보상을 늘린다(사망자는 효과 끊김).
 			int reward = roundEndGold;
 			for (CardCatalog.CardEffect effect : effectsOf(player, CardCatalog.EffectTrigger.ROUND_END)) {
