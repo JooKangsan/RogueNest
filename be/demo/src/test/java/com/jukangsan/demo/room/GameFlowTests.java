@@ -15,6 +15,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 		"game.round.start-announce-seconds=1",
 		"game.role.murderer-chance=1",
 		"game.economy.start-gold=60",
+		"game.economy.turn-gold=1",
+		"game.economy.round-end-gold=3",
 		"game.vote.final-seconds=1",
 		"game.vote.result-seconds=1",
 		"game.round.night-seconds=2",
@@ -54,6 +56,12 @@ class GameFlowTests {
 		return awaitRoom(roomName, room -> room.phase().equals("DISCUSSION") && room.turn() == turn);
 	}
 
+	// 방장을 뺀 전원이 준비완료해야 시작할 수 있으므로 모두 준비시킨 뒤 시작한다.
+	private void readyAndStart(List<RoomService.PlayerSession> sessions, String roomName) {
+		sessions.forEach(session -> roomService.setReady(session, roomName, true));
+		roomService.startGame(sessions.getFirst(), roomName);
+	}
+
 	private String tierOf(String cardId) {
 		return cardCatalog.cards().stream().filter(card -> card.id().equals(cardId)).findFirst().orElseThrow().tier();
 	}
@@ -67,7 +75,11 @@ class GameFlowTests {
 			sessions.add(roomService.authenticate(joined.sessionToken()));
 		}
 
-		roomService.startGame(sessions.getFirst(), roomName);
+		// 방장을 뺀 한 명이라도 준비 안 했으면 시작할 수 없다
+		sessions.subList(1, sessions.size() - 1).forEach(session -> roomService.setReady(session, roomName, true));
+		assertThatThrownBy(() -> roomService.startGame(sessions.getFirst(), roomName))
+				.isInstanceOf(RoomException.class);
+		readyAndStart(sessions, roomName);
 
 		var prepare = roomService.getPublicRoom(roomName);
 		assertThat(prepare.phase()).isEqualTo("PREPARE");
@@ -93,10 +105,11 @@ class GameFlowTests {
 		assertThatThrownBy(() -> roomService.exchangeCoin(session, roomName))
 				.isInstanceOf(RoomException.class);
 
+		List<RoomService.PlayerSession> sessions = new ArrayList<>(List.of(session));
 		for (String nickname : new String[] {"둘", "셋", "넷"}) {
-			roomService.joinRoom(roomName, nickname, null);
+			sessions.add(roomService.authenticate(roomService.joinRoom(roomName, nickname, null).sessionToken()));
 		}
-		roomService.startGame(session, roomName);
+		readyAndStart(sessions, roomName);
 		assertThat(roomService.walletOf(session)).isEqualTo(new RoomDtos.WalletView(60, 0));
 
 		roomService.exchangeCoin(session, roomName);
@@ -116,7 +129,7 @@ class GameFlowTests {
 			sessions.add(roomService.authenticate(joined.sessionToken()));
 		}
 		RoomService.PlayerSession voter = sessions.getFirst();
-		roomService.startGame(voter, roomName);
+		readyAndStart(sessions, roomName);
 
 		assertThatThrownBy(() -> roomService.castVote(voter, roomName, "둘", false))
 				.isInstanceOf(RoomException.class);
@@ -155,7 +168,7 @@ class GameFlowTests {
 			var joined = roomService.joinRoom(roomName, nickname, null);
 			sessions.add(roomService.authenticate(joined.sessionToken()));
 		}
-		roomService.startGame(sessions.getFirst(), roomName);
+		readyAndStart(sessions, roomName);
 		awaitPhase(roomName, "DISCUSSION");
 		return sessions;
 	}
@@ -193,7 +206,12 @@ class GameFlowTests {
 		});
 		assertThat(viewOf(roomName, "나").alive()).isFalse();
 
-		awaitPhase(roomName, caughtRole == Role.THIEF ? "ROUND_END" : "NIGHT");
+		// 도적이면 라운드 종료, 살인마면 살인마가 없어 밤을 건너뛰고 다음 턴, 시민이면 밤
+		switch (caughtRole) {
+			case THIEF -> awaitPhase(roomName, "ROUND_END");
+			case MURDERER -> awaitDiscussion(roomName, 2);
+			case CITIZEN -> awaitPhase(roomName, "NIGHT");
+		}
 	}
 
 	@Test
@@ -252,7 +270,7 @@ class GameFlowTests {
 		assertThatThrownBy(() -> roomService.drawCard(me, roomName, "COMMON"))
 				.isInstanceOf(RoomException.class);
 
-		roomService.startGame(me, roomName);
+		readyAndStart(sessions, roomName);
 		roomService.drawCard(me, roomName, "COMMON");
 		assertThat(roomService.walletOf(me).gold()).isEqualTo(59);
 		assertThat(tierOf(roomService.cardOf(me))).isEqualTo("일반");
@@ -379,7 +397,9 @@ class GameFlowTests {
 				.isInstanceOf(RoomException.class);
 
 		roomService.chooseKillTarget(murderer, roomName, victim);
-		assertThat(roomService.myKillTargetOf(murderer).target()).isEqualTo(victim);
+		// 누르는 즉시 비용을 내고 밤이 끝나 다음 턴이 된다.
+		assertThat(roomService.walletOf(murderer).gold()).isEqualTo(goldBefore - 1);
+		assertThat(roomService.getPublicRoom(roomName).phase()).isEqualTo("DISCUSSION");
 
 		var nextTurn = awaitDiscussion(roomName, 2);
 		assertThat(nextTurn.nightVictim()).isEqualTo(victim);
@@ -422,7 +442,7 @@ class GameFlowTests {
 			sessions.add(roomService.authenticate(roomService.joinRoom(roomName, nickname, null).sessionToken()));
 		}
 		RoomService.PlayerSession me = sessions.getFirst();
-		roomService.startGame(me, roomName);
+		readyAndStart(sessions, roomName);
 
 		assertThatThrownBy(() -> roomService.revealCard(me, roomName)).isInstanceOf(RoomException.class);
 
@@ -467,9 +487,9 @@ class GameFlowTests {
 		}
 		awaitPhase(roomName, "ROUND_END"); // 최종 투표 종료 → 결과 → 라운드 종료
 
-		// 검거 +1G, 라운드 종료 3G(탐관오리는 10G), 칸 +8G, 스피드런(3턴 이내) +7G
+		// 검거 +1G, 라운드 종료 3G, 탐관오리(전설) +10G, 칸 +8G, 스피드런(3턴 이내) +7G
 		assertThat(roomService.walletOf(kan).gold()).isEqualTo(60 + 1 + 8 + 3);
-		assertThat(roomService.walletOf(miser).gold()).isEqualTo(60 + 1 + 10);
+		assertThat(roomService.walletOf(miser).gold()).isEqualTo(60 + 1 + 3 + 10);
 		assertThat(roomService.walletOf(hunter).gold()).isEqualTo(60 + 1 + 7 + 3);
 		assertThat(roomService.walletOf(thief).gold()).isEqualTo(60 + 3);
 	}
@@ -628,14 +648,17 @@ class GameFlowTests {
 
 		roomService.activateCard(citizen, roomName, null);
 		assertThat(roomService.getPublicRoom(roomName).rainTurns()).isEqualTo(2);
-		abstainAllUntilNight(roomName, sessions);
+		for (RoomService.PlayerSession session : sessions) {
+			roomService.castVote(session, roomName, null, true);
+		}
 
+		// 살인마가 움직일 수 없으니 밤을 건너뛰고 바로 2턴
+		var nextTurn = awaitDiscussion(roomName, 2);
+		assertThat(nextTurn.rainTurns()).isEqualTo(1);
 		assertThat(roomService.walletOf(thief).gold()).isEqualTo(61);
 		assertThat(goldOfOthers(sessions, thief)).containsOnly(61);
 		assertThatThrownBy(() -> roomService.chooseKillTarget(murderer, roomName, nicknameOf(citizen)))
 				.isInstanceOf(RoomException.class);
-
-		assertThat(awaitDiscussion(roomName, 2).rainTurns()).isEqualTo(1);
 	}
 
 	@Test
@@ -717,7 +740,7 @@ class GameFlowTests {
 			sessions.add(roomService.authenticate(roomService.joinRoom(roomName, nickname, null).sessionToken()));
 		}
 		RoomService.PlayerSession me = sessions.getFirst();
-		roomService.startGame(me, roomName);
+		readyAndStart(sessions, roomName);
 
 		assertThatThrownBy(() -> roomService.freeReroll(me, roomName)).isInstanceOf(RoomException.class);
 
@@ -837,8 +860,8 @@ class GameFlowTests {
 			roomService.castVote(session, roomName, nicknameOf(thief), false);
 		}
 		awaitPhase(roomName, "ROUND_END");
-		// 60 + 검거 1G + 라운드 종료(탐관오리 5G) + 과거인 10G
-		assertThat(roomService.walletOf(miser).gold()).isEqualTo(76);
+		// 60 + 검거 1G + 라운드 종료 3G + 탐관오리 5G + 과거인 10G
+		assertThat(roomService.walletOf(miser).gold()).isEqualTo(79);
 
 		roomService.skipRoundEnd(sessions.getFirst(), roomName);
 		int before = roomService.walletOf(miser).gold();
@@ -846,5 +869,37 @@ class GameFlowTests {
 		assertThat(roomService.walletOf(miser).gold()).isEqualTo(before);
 		roomService.drawCard(miser, roomName, "COMMON");
 		assertThat(roomService.walletOf(miser).gold()).isEqualTo(before - 1);
+	}
+
+	@Test
+	void threeWayTieSkipsTheTurnWithoutTrial() throws Exception {
+		String roomName = "Three Tie Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라", "마", "바");
+		String[] targets = {"나", "다", "라", "나", "다", "라"};
+		for (int index = 0; index < sessions.size(); index++) {
+			roomService.castVote(sessions.get(index), roomName, targets[index], false);
+		}
+
+		var result = awaitPhase(roomName, "RESULT");
+		assertThat(result.voteResult().kind()).isEqualTo("NO_ONE");
+		assertThat(result.players()).allMatch(RoomDtos.PlayerView::alive);
+	}
+
+	@Test
+	void finalVoteTieBetweenTwoCatchesNoOne() throws Exception {
+		String roomName = "Final Tie Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		String[] targets = {"나", "다", "나", "다"};
+		for (int index = 0; index < sessions.size(); index++) {
+			roomService.castVote(sessions.get(index), roomName, targets[index], false);
+		}
+		assertThat(viewOf(roomName, "나").onTrial()).isTrue();
+		assertThat(viewOf(roomName, "다").onTrial()).isTrue();
+
+		// 아무도 표를 바꾸지 않고 최종 투표가 끝나면 동표 그대로 → 아무도 안 잡힘
+		var result = awaitPhase(roomName, "RESULT");
+		assertThat(result.voteResult().kind()).isEqualTo("NO_ONE");
+		assertThat(viewOf(roomName, "나").alive()).isTrue();
+		assertThat(viewOf(roomName, "다").alive()).isTrue();
 	}
 }

@@ -60,7 +60,8 @@ public final class RoomDtos {
 	) {
 	}
 
-	public record ActiveSynergyView(String name, List<String> nicknames) {
+	// 발동 중인 시너지. 발동한 시너지만 지금 단계의 효과(effect)를 공개한다.
+	public record ActiveSynergyView(String name, String effect, List<String> nicknames) {
 	}
 
 	public record RoomSummary(
@@ -126,6 +127,10 @@ public final class RoomDtos {
 
 	// 본인이 고른 살해 대상 닉네임. 없으면 null
 	public record MyKillTargetView(String target) {
+	}
+
+	// 본인에게만 크게 띄우는 모달 알림 (밤 사이 강탈 결과 등). tone: LOSS(잃음) / GAIN(얻음) / KILL(살해함) / DEATH(살해당함) / INFO
+	public record AlertView(String tone, String title, List<String> lines) {
 	}
 
 	// 본인에게만 보내는 알림 (강탈 결과 등)

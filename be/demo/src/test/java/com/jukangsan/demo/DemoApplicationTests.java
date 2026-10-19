@@ -91,12 +91,12 @@ class DemoApplicationTests {
 
 	@Test
 	void validatesRoomSettingsRangesAndFixedTurnDuration() {
-		assertThat(validator.validate(new RoomConfig(3, 25, 120))).isEmpty();
-		assertThat(validator.validate(new RoomConfig(11, 75, 120))).isEmpty();
-		assertThat(validator.validate(new RoomConfig(2, 50, 120))).isNotEmpty();
-		assertThat(validator.validate(new RoomConfig(12, 50, 120))).isNotEmpty();
-		assertThat(validator.validate(new RoomConfig(7, 24, 120))).isNotEmpty();
-		assertThat(validator.validate(new RoomConfig(7, 76, 120))).isNotEmpty();
+		assertThat(validator.validate(new RoomConfig(3, 25, 180))).isEmpty();
+		assertThat(validator.validate(new RoomConfig(11, 75, 180))).isEmpty();
+		assertThat(validator.validate(new RoomConfig(2, 50, 180))).isNotEmpty();
+		assertThat(validator.validate(new RoomConfig(12, 50, 180))).isNotEmpty();
+		assertThat(validator.validate(new RoomConfig(7, 24, 180))).isNotEmpty();
+		assertThat(validator.validate(new RoomConfig(7, 76, 180))).isNotEmpty();
 		assertThat(validator.validate(new RoomConfig(7, 50, 119))).isNotEmpty();
 		assertThat(validator.validate(new RoomConfig(7, 50, 121))).isNotEmpty();
 	}
@@ -265,7 +265,8 @@ class DemoApplicationTests {
 		String roomName = roomService.createRoom("Background Lobby", null);
 		var host = roomService.joinRoom(roomName, "방장", null);
 		for (String nickname : new String[] {"둘", "셋", "넷"}) {
-			roomService.joinRoom(roomName, nickname, null);
+			var joined = roomService.joinRoom(roomName, nickname, null);
+			roomService.setReady(roomService.authenticate(joined.sessionToken()), roomName, true);
 		}
 		assertThat(roomService.getPublicRoom(roomName).backgroundIndex()).isNull();
 

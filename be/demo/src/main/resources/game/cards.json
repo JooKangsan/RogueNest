@@ -151,7 +151,7 @@
       "name": "미래인",
       "tier": "일반",
       "price": 1,
-      "effect": "남은 턴의 턴 보상 1G를 한 번에 당겨 받습니다.",
+      "effect": "남은 턴의 턴 보상을 한 번에 당겨 받습니다.",
       "description": "미래애세 왔다고 주장하는 사람. 짧은 미래에서 돈을 땡겨온다",
       "image": "common_future_person.webp",
       "synergies": ["탱커", "투잡러"],
@@ -284,7 +284,7 @@
       "name": "탐관오리",
       "tier": "일반",
       "price": 1,
-      "effect": "라운드 종료 보상을 5G로 늘립니다.",
+      "effect": "라운드 종료 시 5G를 추가로 얻습니다.",
       "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
       "image": "common_miser.webp",
       "synergies": ["과거인"],
@@ -292,7 +292,7 @@
       "effects": [
         {
           "trigger": "ROUND_END",
-          "action": "SET_ROUND_REWARD",
+          "action": "GAIN_GOLD",
           "amount": 5
         }
       ]
@@ -601,7 +601,7 @@
       "name": "탐관오리",
       "tier": "희귀",
       "price": 3,
-      "effect": "라운드 종료 보상을 7G로 늘립니다.",
+      "effect": "라운드 종료 시 7G를 추가로 얻습니다.",
       "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
       "image": "rare_miser.webp",
       "synergies": ["과거인"],
@@ -609,7 +609,7 @@
       "effects": [
         {
           "trigger": "ROUND_END",
-          "action": "SET_ROUND_REWARD",
+          "action": "GAIN_GOLD",
           "amount": 7
         }
       ]
@@ -852,7 +852,7 @@
       "name": "탐관오리",
       "tier": "전설",
       "price": 5,
-      "effect": "라운드 종료 보상을 10G로 늘립니다.",
+      "effect": "라운드 종료 시 10G를 추가로 얻습니다.",
       "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
       "image": "legendary_miser.webp",
       "synergies": ["과거인"],
@@ -860,7 +860,7 @@
       "effects": [
         {
           "trigger": "ROUND_END",
-          "action": "SET_ROUND_REWARD",
+          "action": "GAIN_GOLD",
           "amount": 10
         }
       ]
@@ -886,6 +886,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "공개자가 1명 늘 때마다 그 시점의 참여자 전원 +1G",
           "effects": [
             {
               "trigger": "SYNERGY_ON",
@@ -904,6 +905,7 @@
       "levels": [
         {
           "count": 4,
+          "text": "참여자 각자 코인 1개",
           "effects": [
             {
               "trigger": "SYNERGY_ON",
@@ -922,6 +924,7 @@
       "levels": [
         {
           "count": 4,
+          "text": "참여자 각자 +5G, 검거 보상 2배",
           "effects": [
             {
               "trigger": "SYNERGY_ON",
@@ -945,6 +948,7 @@
       "levels": [
         {
           "count": 5,
+          "text": "칸 +10G, 나머지 참여자 각 +5G",
           "effects": [
             {
               "trigger": "SYNERGY_ON",
@@ -970,6 +974,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "참여자 각자 +3G",
           "effects": [
             {
               "trigger": "SYNERGY_ON",
@@ -980,6 +985,7 @@
         },
         {
           "count": 3,
+          "text": "참여자 각자 +5G (2인 효과 대신)",
           "effects": [
             {
               "trigger": "SYNERGY_ON",
@@ -998,6 +1004,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "참여자 강탈 무효",
           "effects": [
             {
               "trigger": "ROBBED",
@@ -1008,6 +1015,7 @@
         },
         {
           "count": 3,
+          "text": "참여자 강탈·살해 무효",
           "effects": [
             {
               "trigger": "ROBBED",
@@ -1031,6 +1039,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "참여자 매 턴 +1G",
           "effects": [
             {
               "trigger": "TURN_END",
@@ -1041,6 +1050,7 @@
         },
         {
           "count": 3,
+          "text": "참여자 매 턴 +2G, 라운드 종료 시 +5G",
           "effects": [
             {
               "trigger": "TURN_END",
@@ -1064,6 +1074,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "참여자 각자 +5G, 전설 카드 무료 다시 뽑기 1회 (새 카드는 비공개)",
           "effects": [
             {
               "trigger": "SYNERGY_ON",
@@ -1088,6 +1099,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "참여자 매 턴 +1G",
           "effects": [
             {
               "trigger": "TURN_END",
@@ -1106,6 +1118,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "참여자 매 턴 +1G",
           "effects": [
             {
               "trigger": "TURN_END",
@@ -1124,6 +1137,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "참여자 매 턴 +1G",
           "effects": [
             {
               "trigger": "TURN_END",
@@ -1142,6 +1156,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "참여자 2턴마다 +1G",
           "effects": [
             {
               "trigger": "TURN_END",
@@ -1161,6 +1176,7 @@
       "levels": [
         {
           "count": 2,
+          "text": "라운드 종료 시 참여자 각 +10G, 다음 라운드 인물 카드 1회 무료",
           "effects": [
             {
               "trigger": "ROUND_END",

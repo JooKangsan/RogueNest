@@ -69,7 +69,7 @@ public final class CardCatalog {
 			}
 			int previous = 0;
 			for (SynergyLevel level : synergy.levels()) {
-				if (level.count() <= previous || level.effects() == null) {
+				if (level.count() <= previous || level.effects() == null || level.text() == null) {
 					throw new IllegalStateException("시너지 '" + synergy.name() + "'의 단계 인원은 오름차순이어야 합니다.");
 				}
 				previous = level.count();
@@ -178,8 +178,6 @@ public final class CardCatalog {
 	public enum EffectAction {
 		// amount G 획득
 		GAIN_GOLD,
-		// 라운드 종료 보상을 amount G로 바꿈
-		SET_ROUND_REWARD,
 		// 라운드 종료 시, 카드를 가진 뒤 강탈당한 적이 없으면 amount G 획득
 		GAIN_GOLD_IF_NOT_ROBBED,
 		// 당하는 일(강탈/살해)을 무효로 함
@@ -302,7 +300,8 @@ public final class CardCatalog {
 	}
 
 	// count명(종) 이상이면 이 단계. 높은 단계가 되면 낮은 단계 효과는 교체된다.
-	public record SynergyLevel(int count, List<CardEffect> effects) {
+	// text: 발동한 뒤에 보여주는 효과 설명 (발동 전에는 공개하지 않는다)
+	public record SynergyLevel(int count, String text, List<CardEffect> effects) {
 	}
 
 	public record SynergyRule(String id, String name, SynergyCountBy countBy, List<SynergyLevel> levels) {
