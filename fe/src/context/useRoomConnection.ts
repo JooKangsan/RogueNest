@@ -7,6 +7,8 @@ import {
 } from "react";
 import { Client, type IMessage, type StompSubscription } from "@stomp/stompjs";
 import type {
+  Alert,
+  AlertTone,
   ChatMessage,
   ConnectionState,
   JoinResponse,
@@ -29,6 +31,7 @@ type RoomConnectionOptions = {
   setMyCard: Dispatch<SetStateAction<MyCard | null>>;
   setMyKillTarget: Dispatch<SetStateAction<string | null>>;
   setNotices: Dispatch<SetStateAction<Notice[]>>;
+  setAlerts: Dispatch<SetStateAction<Alert[]>>;
   setChat: Dispatch<SetStateAction<ChatMessage[]>>;
   setConnection: Dispatch<SetStateAction<ConnectionState>>;
   setHasSession: Dispatch<SetStateAction<boolean>>;
@@ -46,6 +49,7 @@ export function useRoomConnection({
   setMyCard,
   setMyKillTarget,
   setNotices,
+  setAlerts,
   setChat,
   setConnection,
   setHasSession,
@@ -123,11 +127,26 @@ export function useRoomConnection({
       } else if (event.type === "room") {
         setRoom(event.payload as Room);
       } else if (event.type === "announcement") {
-        // 방 전체 알림(장마, 레드카드, 암살 등)은 개인 알림과 같은 자리에 띄운다.
+        // 방 전체 공지(장마, 레드카드, 암살, 시너지 발동 등)는 모두에게 크게 띄운다.
         const { message } = event.payload as { message: string };
-        setNotices((notices) => [
-          ...notices.slice(-4),
-          { id: Date.now() + Math.random(), message },
+        setAlerts((alerts) => [
+          ...alerts,
+          {
+            id: Date.now() + Math.random(),
+            tone: "NOTICE",
+            title: "전체 공지",
+            lines: [message],
+          },
+        ]);
+      } else if (event.type === "alert") {
+        const { tone, title, lines } = event.payload as {
+          tone: AlertTone;
+          title: string;
+          lines: string[];
+        };
+        setAlerts((alerts) => [
+          ...alerts,
+          { id: Date.now() + Math.random(), tone, title, lines },
         ]);
       } else if (event.type === "chat") {
         setChat((messages) => [
@@ -162,6 +181,7 @@ export function useRoomConnection({
       setMyCard,
       setMyKillTarget,
       setNotices,
+      setAlerts,
       setRoom,
       subscribeRoom,
       updateIdentity,
@@ -190,6 +210,7 @@ export function useRoomConnection({
       setMyCard(null);
       setMyKillTarget(null);
       setNotices([]);
+      setAlerts([]);
       setConnection("connecting");
       navigate("/waiting");
       const scheme = window.location.protocol === "https:" ? "wss" : "ws";
@@ -231,6 +252,7 @@ export function useRoomConnection({
             setMyCard(null);
             setMyKillTarget(null);
             setNotices([]);
+            setAlerts([]);
             setConnection("idle");
             setError(
               "재접속할 수 있는 시간이 지났거나 세션이 만료됐습니다. 다시 입장해 주세요.",
@@ -260,6 +282,7 @@ export function useRoomConnection({
       setMyCard,
       setMyKillTarget,
       setNotices,
+      setAlerts,
       setError,
       setHasSession,
       setMyNickname,
@@ -329,6 +352,7 @@ export function useRoomConnection({
     setMyCard(null);
     setMyKillTarget(null);
     setNotices([]);
+    setAlerts([]);
     setChat([]);
     setConnection("idle");
     setError("");
@@ -346,6 +370,7 @@ export function useRoomConnection({
     setMyCard,
     setMyKillTarget,
     setNotices,
+    setAlerts,
   ]);
 
   return { connectToRoom, publish, leaveRoom };

@@ -4,6 +4,7 @@ import waitingBackground from "../../assets/waiting_page.webp";
 import HoodCharacter from "../../components/HoodCharacter";
 import { avatarColor } from "../../components/avatarColor";
 import ChatPanel from "../../components/ChatPanel";
+import ConnectingScreen from "../../components/ConnectingScreen";
 import { NumberSetting } from "../../components/NumberSetting";
 import RoomSettingsModal from "../../components/RoomSettingsModal";
 import SquareButton from "../../components/SquareButton";
@@ -82,22 +83,26 @@ export default function WaitingPage() {
 
   if (!room) {
     return (
-      <section
-        className="relative left-1/2 flex min-h-screen w-screen -translate-x-1/2 items-center justify-center bg-cover bg-center text-amber-950"
-        style={{ backgroundImage: `url("${waitingBackground}")` }}
-        aria-live="polite"
-      >
-        <p className={`${panelClass} px-6 py-4`}>
-          {connection === "reconnecting"
+      <ConnectingScreen
+        background={waitingBackground}
+        message={
+          connection === "reconnecting"
             ? "대기실에 다시 연결하는 중..."
-            : "대기실에 연결하는 중..."}
-        </p>
-      </section>
+            : "대기실에 연결하는 중..."
+        }
+        error={error}
+        onLeave={leaveRoom}
+      />
     );
   }
 
   const isHost = Boolean(myPlayer?.host);
-  const canStart = room.players.length >= room.minPlayers;
+  // 인원이 차고, 방장을 뺀 전원이 준비완료해야 시작할 수 있다. 서버도 같은 조건으로 거부한다.
+  const notReady = room.players.filter(
+    (player) => !player.host && !player.ready,
+  );
+  const enoughPlayers = room.players.length >= room.minPlayers;
+  const canStart = enoughPlayers && notReady.length === 0;
   const emptySlots = MAX_PLAYERS - room.players.length;
 
   return (
@@ -233,7 +238,9 @@ export default function WaitingPage() {
                 </SquareButton>
                 {!canStart && (
                   <p className="text-center text-sm text-amber-950 [text-shadow:0_0_4px_rgb(255_251_235)]">
-                    {room.minPlayers - room.players.length}명이 더 필요해요
+                    {!enoughPlayers
+                      ? `${room.minPlayers - room.players.length}명이 더 필요해요`
+                      : `${notReady.length}명이 아직 준비하지 않았어요`}
                   </p>
                 )}
               </>

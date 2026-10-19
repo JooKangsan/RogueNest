@@ -1,4 +1,4 @@
-import type { Role } from "../../context/gameTypes";
+import type { Role, VoteResult } from "../../context/gameTypes";
 
 // 직업카드 일러스트: assets/roles/{image}
 const roleImages = Object.fromEntries(
@@ -47,4 +47,18 @@ export const ROLE_INFO: Record<
 
 export function getRoleImage(role: Role) {
   return roleImages[ROLE_INFO[role].image];
+}
+
+// 투표 결과 안내에 띄우는 쓰러진 도적/살인마 그림
+const CAUGHT_IMAGES: Partial<Record<VoteResult["kind"], string>> = {
+  THIEF_CAUGHT: "thief-caught.webp",
+  THIEF_LEFT: "thief-caught.webp",
+  THIEF_KILLED: "thief-caught.webp",
+  THIEF_ASSASSINATED: "thief-caught.webp",
+  MURDERER_CAUGHT: "murderer-caught.webp",
+};
+
+export function getCaughtImage(kind: VoteResult["kind"]): string | undefined {
+  const image = CAUGHT_IMAGES[kind];
+  return image ? roleImages[image] : undefined;
 }

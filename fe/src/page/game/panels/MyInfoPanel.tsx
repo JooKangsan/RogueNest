@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import type { CardCatalog, Wallet } from "../../../context/gameTypes";
 import { lightPanel } from "../styles";
 
@@ -18,6 +19,33 @@ const CARD_GRADES: {
   },
 ];
 
+const GOLD_DELTA_MS = 1_600;
+
+// 골드 변화량. 숫자 위로 떠올랐다 사라진다. 늘면 금색 +, 줄면 빨간 -.
+function GoldDelta({
+  id,
+  delta,
+  onDone,
+}: {
+  id: number;
+  delta: number;
+  onDone: (id: number) => void;
+}) {
+  useEffect(() => {
+    const timeout = window.setTimeout(() => onDone(id), GOLD_DELTA_MS);
+    return () => window.clearTimeout(timeout);
+  }, [id, onDone]);
+  return (
+    <span
+      className={`block text-4xl font-bold leading-tight [-webkit-text-stroke:1.5px_#422006] [paint-order:stroke_fill] motion-safe:animate-gold-float ${
+        delta > 0 ? "text-yellow-400" : "text-red-500"
+      }`}
+    >
+      {delta > 0 ? `+${delta}` : delta}G
+    </span>
+  );
+}
+
 export default function MyInfoPanel({
   wallet,
   coinPrice,
@@ -37,6 +65,25 @@ export default function MyInfoPanel({
   // 다음 뽑기 1회 무료 (과거인 시너지)
   freeDraw?: boolean;
 }) {
+  // 골드가 바뀔 때마다 이전 값과의 차이를 띄운다. 처음 받은 값(재접속 포함)은 띄우지 않는다.
+  const gold = wallet?.gold ?? null;
+  const [shownGold, setShownGold] = useState(gold);
+  const [deltas, setDeltas] = useState<{ id: number; delta: number }[]>([]);
+  if (gold !== shownGold) {
+    setShownGold(gold);
+    if (gold !== null && shownGold !== null) {
+      setDeltas((current) => [
+        ...current.slice(-3),
+        { id: Date.now() + Math.random(), delta: gold - shownGold },
+      ]);
+    }
+  }
+  const removeDelta = useCallback(
+    (id: number) =>
+      setDeltas((current) => current.filter((item) => item.id !== id)),
+    [],
+  );
+
   const canExchange =
     isConnected && wallet !== null && wallet.gold >= coinPrice;
 
@@ -48,7 +95,23 @@ export default function MyInfoPanel({
       <dl className="divide-y divide-amber-900/15 rounded-lg bg-white/70 px-3">
         <div className="flex items-center justify-between py-2">
           <dt>골드</dt>
-          <dd className="font-bold tabular-nums">🪙 {wallet?.gold ?? "-"} G</dd>
+          <dd className="relative font-bold tabular-nums">
+            {/* 골드 변화량: 숫자 바로 위에 떠올랐다 사라진다 */}
+            <span
+              aria-live="polite"
+              className="pointer-events-none absolute bottom-full right-0 flex flex-col-reverse items-end"
+            >
+              {deltas.map((item) => (
+                <GoldDelta
+                  key={item.id}
+                  id={item.id}
+                  delta={item.delta}
+                  onDone={removeDelta}
+                />
+              ))}
+            </span>
+            🪙 {wallet?.gold ?? "-"} G
+          </dd>
         </div>
         <div className="flex items-center justify-between py-2">
           <dt>코인</dt>

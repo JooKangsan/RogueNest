@@ -20,9 +20,10 @@ export default function TurnHeader({
         <span aria-hidden>⌛</span>
       </div>
       {remainingSeconds !== null && (
+        // 배경 없이 큰 숫자만 띄운다. 어떤 배경 위에서도 읽히도록 진한 테두리와 그림자를 준다.
         <div
-          className={`rounded-md border-2 border-stone-900 bg-stone-100 px-6 py-1 text-xl font-bold tabular-nums shadow-lg ${
-            remainingSeconds <= 10 ? "text-red-700" : "text-stone-900"
+          className={`text-5xl font-bold leading-none tabular-nums [-webkit-text-stroke:2px_#1c1917] [paint-order:stroke_fill] [text-shadow:0_3px_6px_rgba(0,0,0,0.7)] ${
+            remainingSeconds <= 10 ? "text-red-500" : "text-amber-300"
           }`}
           aria-label={`남은 시간 ${remainingSeconds}초`}
         >

@@ -185,7 +185,7 @@ export default function RoomSettingsModal({
           </p>
         )}
         <p className="mt-4 text-sm text-amber-900/70">
-          턴 시간은 120초로 고정이에요.
+          토론 시간은 180초로 고정이에요.
         </p>
       </section>
     </div>

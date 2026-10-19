@@ -55,7 +55,8 @@ export type Room = {
   // 장마로 강탈과 살인마 행동이 막힌 남은 턴 수
   rainTurns: number;
   // 발동 중인 시너지와 참여자 닉네임. 효과는 공개하지 않는다.
-  synergies: { name: string; nicknames: string[] }[];
+  // 발동한 시너지만 지금 단계의 효과(effect)가 온다.
+  synergies: { name: string; effect: string; nicknames: string[] }[];
 };
 
 // 라운드 종료 결과 (ROUND_END / GAME_OVER 단계에서만 온다)
@@ -109,6 +110,16 @@ export type MyCard = {
   activated: boolean;
   bonusRerollTier: "일반" | "희귀" | "전설" | null;
   freeDraw: boolean;
+};
+
+// 화면 가운데 크게 띄우는 알림. 밤 사이 개인 소식(강탈 등)과 방 전체 공지(장마, 시너지 발동 등)
+// tone: LOSS(강탈당함) / GAIN(강탈함) / KILL(살해함) / DEATH(살해당함) / INFO(막음·실패) / NOTICE(전체 공지)
+export type AlertTone = "LOSS" | "GAIN" | "KILL" | "DEATH" | "INFO" | "NOTICE";
+export type Alert = {
+  id: number;
+  tone: AlertTone;
+  title: string;
+  lines: string[];
 };
 
 // 본인에게만 오는 알림 (강탈 결과 등)

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import type { CardDefinition, Role } from "../../../context/gameTypes";
-import { getCardImage } from "../cardImages";
+import { type CardUse, characterCard } from "../cardContent";
 import { CardModal, GameCard, type GameCardContent } from "../GameCard";
 import { ROLE_INFO, getRoleImage } from "../roles";
 import { lightPanel } from "../styles";
@@ -23,38 +23,6 @@ function roleCard(role: Role | null): GameCardContent {
     image: getRoleImage(role),
     symbol: "✦",
     effect: info.cardText,
-  };
-}
-
-const TIER_TONE = {
-  일반: "common",
-  희귀: "rare",
-  전설: "legendary",
-} as const;
-
-// 사용 버튼 상태. onActivate는 지금 사용할 수 있을 때만 넘긴다.
-type CardUse = { activated: boolean; onActivate?: () => void };
-
-function characterCard(card: CardDefinition, use?: CardUse): GameCardContent {
-  return {
-    layout: "character",
-    title: `${card.name} (${card.tier})`,
-    tone: TIER_TONE[card.tier],
-    image: getCardImage(card.image),
-    symbol: "?",
-    description: card.description ?? undefined,
-    effect: card.effect,
-    hashtags: card.synergyTags,
-    // 사용 버튼: 토론 단계에서만, 라운드당 1회. 확인 창은 게임 화면에서 띄운다.
-    action: card.actionLabel
-      ? {
-          label: use?.activated
-            ? `${card.actionLabel} (사용함)`
-            : card.actionLabel,
-          disabled: !use?.onActivate || use.activated,
-          onClick: () => use?.onActivate?.(),
-        }
-      : undefined,
   };
 }
 
@@ -102,6 +70,7 @@ export default function CardsPanel({
   activated,
   onActivate,
   freeReroll = null,
+  closeKey,
 }: {
   role: Role | null;
   // 보유한 인물 카드. 없으면 null
@@ -117,6 +86,8 @@ export default function CardsPanel({
   // 무료로 다시 뽑을 수 있을 때만 넘긴다. tier: 새로 나올 카드 등급
   // (다알아 박사님: 일반 → 희귀, 희귀 → 전설 / 통모 시너지: 전설)
   freeReroll?: { tier: string; onClick: () => void } | null;
+  // 이 값이 바뀌면(단계가 넘어가면) 열려 있던 카드 확인 창을 닫는다.
+  closeKey: string;
 }) {
   // 확대해서 보는 카드. 내용은 매번 최신 상태로 다시 만든다(사용 버튼 활성 여부 등).
   const [openCard, setOpenCard] = useState<{
@@ -139,6 +110,14 @@ export default function CardsPanel({
       : undefined,
   };
   const heldCard = card ? characterCard(card, use) : EMPTY_CHARACTER_CARD;
+
+  // 턴·단계가 바뀌면 카드 확인 창과 공개 확인을 닫는다.
+  const [shownCloseKey, setShownCloseKey] = useState(closeKey);
+  if (closeKey !== shownCloseKey) {
+    setShownCloseKey(closeKey);
+    setOpenCard(null);
+    setConfirmingReveal(false);
+  }
 
   // 새 카드를 뽑으면 확대 카드로 바로 보여준다.
   const [shownCardId, setShownCardId] = useState(card?.id ?? null);

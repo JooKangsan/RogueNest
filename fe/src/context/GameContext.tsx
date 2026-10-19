@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { createRoomRequest, joinRoomRequest } from "./gameApi";
 import { readStoredJoin } from "./gameSession";
 import type {
+  Alert,
   ChatMessage,
   ConnectionState,
   MyCard,
@@ -34,6 +35,9 @@ type GameContextValue = {
   myKillTarget: string | null;
   notices: Notice[];
   dismissNotice: (id: number) => void;
+  // 화면 가운데 크게 띄울 알림. 맨 앞 것부터 하나씩 보여준다.
+  alerts: Alert[];
+  dismissAlert: (id: number) => void;
   hasSession: boolean;
   myPlayer: Player | undefined;
   chat: ChatMessage[];
@@ -64,6 +68,12 @@ export function GameProvider({ children }: PropsWithChildren) {
   const [myCard, setMyCard] = useState<MyCard | null>(null);
   const [myKillTarget, setMyKillTarget] = useState<string | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const dismissAlert = useCallback(
+    (id: number) =>
+      setAlerts((current) => current.filter((alert) => alert.id !== id)),
+    [],
+  );
   const dismissNotice = useCallback(
     (id: number) =>
       setNotices((current) => current.filter((notice) => notice.id !== id)),
@@ -87,6 +97,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     setMyCard,
     setMyKillTarget,
     setNotices,
+    setAlerts,
     setChat,
     setConnection,
     setHasSession,
@@ -153,6 +164,8 @@ export function GameProvider({ children }: PropsWithChildren) {
         myKillTarget,
         notices,
         dismissNotice,
+        alerts,
+        dismissAlert,
         hasSession,
         myPlayer,
         chat,

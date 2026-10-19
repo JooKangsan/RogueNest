@@ -57,6 +57,7 @@ export default function PlazaRing({
   canTarget = (player) => player.alive,
   actionLabel = "에게 투표",
   cardLabel = () => undefined,
+  onOpenCard,
 }: {
   players: Player[];
   myNickname: string | undefined;
@@ -71,6 +72,8 @@ export default function PlazaRing({
   actionLabel?: string;
   // 공개된 인물 카드 id → 화면에 보일 이름
   cardLabel?: (cardId: string) => string | undefined;
+  // 공개된 카드 이름표를 누르면 그 카드를 크게 보여준다.
+  onOpenCard?: (cardId: string, origin: DOMRect) => void;
 }) {
   // 색과 자리 모두 입장 순서로 정한다. 첫 번째 플레이어가 12시, 이후 시계 방향.
   const angles = seatAngles(players.length);
@@ -102,7 +105,7 @@ export default function PlazaRing({
         const { pose, mirrored } = onTrial
           ? { pose: "front" as HoodPose, mirrored: false }
           : POSE_BY_SECTOR[sector];
-        // 아래쪽(가까운 쪽)일수록 조금 크게 그려 원근감을 준다. 중앙에 서도 크기는 원래 자리 그대로.
+        // 캐릭터 크기는 자리와 상관없이 모두 같다. depth는 겹칠 때 앞뒤 순서(아래쪽이 앞)에만 쓴다.
         const depth = (Math.sin(radians) + 1) / 2;
         const isMe = player.nickname === myNickname;
         const isTarget = player.nickname === voteTarget;
@@ -110,38 +113,53 @@ export default function PlazaRing({
 
         return (
           // 기준점이 발끝이 되도록 캐릭터 아래 가운데를 (x, y)에 맞추고, 닉네임은 발 아래에 띄운다.
-          <button
+          // 캐릭터(투표)와 공개 카드 이름표(카드 보기)는 서로 다른 버튼이다.
+          <div
             key={player.nickname}
-            type="button"
-            disabled={!targetable}
-            aria-pressed={isTarget}
-            aria-label={`${player.nickname}${actionLabel}`}
-            onClick={() => onVote?.(player.nickname)}
-            className={`group pointer-events-auto absolute -translate-x-1/2 -translate-y-full transition-[left,top,scale] duration-700 ease-out disabled:pointer-events-none ${
-              targetable ? "cursor-pointer" : ""
-            } ${player.alive ? "" : "opacity-45 grayscale"}`}
+            className={`absolute -translate-x-1/2 -translate-y-full transition-[left,top] duration-700 ease-out ${
+              player.alive ? "" : "opacity-45 grayscale"
+            }`}
             style={{
               left: `${x}%`,
               top: `${y}%`,
               width: layout.characterWidth,
               minWidth: "44px",
-              zIndex: onTrial ? 200 : Math.round(depth * 100),
-              scale: `${0.85 + depth * 0.25}`,
+              zIndex: onTrial ? 200 + trialIndex : Math.round(depth * 100),
               transformOrigin: "bottom center",
             }}
           >
-            {/* 받은 표 수. 배경 없이 숫자만 띄우고, 내가 찍은 사람은 빨간 숫자로 강조한다. */}
-            {player.alive && player.votes > 0 && (
-              <span
-                key={player.votes}
-                aria-label={`${player.votes}표${isTarget ? ", 내가 투표함" : ""}`}
-                className={`absolute bottom-full left-1/2 -translate-x-1/2 text-3xl font-bold leading-none [-webkit-text-stroke:1.5px_#1c1917] [paint-order:stroke_fill] [text-shadow:0_2px_4px_rgba(0,0,0,0.6)] motion-safe:animate-page-in ${
-                  isTarget ? "text-red-500" : "text-amber-300"
-                }`}
-              >
-                {player.votes}
-              </span>
-            )}
+            {/* 머리 위: 받은 표 수, 그 위로 내 표시 */}
+            <div className="pointer-events-none absolute bottom-full left-1/2 flex -translate-x-1/2 flex-col-reverse items-center">
+              {player.alive && player.votes > 0 && (
+                // 배경 없이 숫자만 띄우고, 내가 찍은 사람은 빨간 숫자로 강조한다.
+                <span
+                  key={player.votes}
+                  aria-label={`${player.votes}표${isTarget ? ", 내가 투표함" : ""}`}
+                  className={`text-3xl font-bold leading-none [-webkit-text-stroke:1.5px_#1c1917] [paint-order:stroke_fill] [text-shadow:0_2px_4px_rgba(0,0,0,0.6)] motion-safe:animate-page-in ${
+                    isTarget ? "text-red-500" : "text-amber-300"
+                  }`}
+                >
+                  {player.votes}
+                </span>
+              )}
+              {/* 내 캐릭터 표시: 머리 위에 크게 */}
+              {isMe && (
+                <span
+                  aria-label="나"
+                  className="mb-0.5 flex flex-col items-center drop-shadow-[0_2px_3px_rgba(0,0,0,0.6)] motion-safe:animate-bounce"
+                >
+                  <span className="whitespace-nowrap rounded-full border-2 border-stone-900 bg-amber-400 px-3 text-xl font-bold leading-snug text-stone-900">
+                    나
+                  </span>
+                  <span
+                    aria-hidden
+                    className="-mt-1 text-xl leading-none text-amber-400 [-webkit-text-stroke:1.5px_#1c1917] [paint-order:stroke_fill]"
+                  >
+                    ▼
+                  </span>
+                </span>
+              )}
+            </div>
             {/* 투표를 마친 사람 표시 (대상은 비공개) */}
             {player.alive && player.voted && (
               <span
@@ -151,18 +169,29 @@ export default function PlazaRing({
                 ✓
               </span>
             )}
-            <HoodCharacter
-              pose={pose}
-              mirrored={mirrored}
-              color={color}
-              className={`w-full transition ${
-                isTarget
-                  ? "drop-shadow-[0_0_6px_rgba(239,68,68,0.95)]"
-                  : "drop-shadow-[0_4px_3px_rgba(0,0,0,0.35)]"
-              } ${targetable ? "group-hover:-translate-y-1 group-hover:brightness-110" : ""}`}
-            />
+            <button
+              type="button"
+              disabled={!targetable}
+              aria-pressed={isTarget}
+              aria-label={`${player.nickname}${actionLabel}`}
+              onClick={() => onVote?.(player.nickname)}
+              className={`group pointer-events-auto block w-full disabled:pointer-events-none ${
+                targetable ? "cursor-pointer" : ""
+              }`}
+            >
+              <HoodCharacter
+                pose={pose}
+                mirrored={mirrored}
+                color={color}
+                className={`w-full transition ${
+                  isTarget
+                    ? "drop-shadow-[0_0_6px_rgba(239,68,68,0.95)]"
+                    : "drop-shadow-[0_4px_3px_rgba(0,0,0,0.35)]"
+                } ${targetable ? "group-hover:-translate-y-1 group-hover:brightness-110" : ""}`}
+              />
+            </button>
             <span
-              className={`absolute left-1/2 top-full mt-0.5 max-w-[180%] -translate-x-1/2 truncate whitespace-nowrap rounded-full px-2 text-xs ${
+              className={`pointer-events-none absolute left-1/2 top-full mt-0.5 max-w-[180%] -translate-x-1/2 truncate whitespace-nowrap rounded-full px-2 text-xs ${
                 isMe
                   ? "bg-amber-400 font-bold text-stone-900"
                   : "bg-stone-900/75 text-amber-50"
@@ -170,16 +199,27 @@ export default function PlazaRing({
             >
               {player.nickname}
             </span>
-            {/* 공개한 인물 카드 */}
+            {/* 공개한 인물 카드. 누르면 카드를 크게 본다. */}
             {player.revealedCardId && (
-              <span
-                title="공개된 인물 카드"
-                className="absolute left-1/2 top-full mt-5 max-w-[200%] -translate-x-1/2 truncate whitespace-nowrap rounded-md border border-[#5a3a22] bg-[#f6ecda] px-1.5 text-[11px] font-bold text-[#3b2413] shadow motion-safe:animate-page-in"
+              <button
+                type="button"
+                title="공개된 인물 카드 보기"
+                aria-label={`${player.nickname}님이 공개한 카드 보기: ${
+                  cardLabel(player.revealedCardId) ?? "인물 카드"
+                }`}
+                disabled={!onOpenCard}
+                onClick={(event) =>
+                  onOpenCard?.(
+                    player.revealedCardId!,
+                    event.currentTarget.getBoundingClientRect(),
+                  )
+                }
+                className="pointer-events-auto absolute left-1/2 top-full mt-5 max-w-[200%] -translate-x-1/2 truncate whitespace-nowrap rounded-md border border-[#5a3a22] bg-[#f6ecda] px-1.5 text-[11px] font-bold text-[#3b2413] shadow transition enabled:hover:-translate-y-0.5 enabled:hover:bg-white motion-safe:animate-page-in"
               >
                 🂠 {cardLabel(player.revealedCardId) ?? "인물 카드"}
-              </span>
+              </button>
             )}
-          </button>
+          </div>
         );
       })}
     </div>
