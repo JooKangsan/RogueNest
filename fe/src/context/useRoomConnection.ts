@@ -13,6 +13,8 @@ import type {
   Role,
   Room,
   RoomEvent,
+  MyVote,
+  Notice,
   Wallet,
 } from "./gameTypes";
 import { clearStoredJoin, readStoredJoin, saveStoredJoin } from "./gameSession";
@@ -22,6 +24,10 @@ type RoomConnectionOptions = {
   setRoom: Dispatch<SetStateAction<Room | null>>;
   setRole: Dispatch<SetStateAction<Role | null>>;
   setWallet: Dispatch<SetStateAction<Wallet | null>>;
+  setMyVote: Dispatch<SetStateAction<MyVote | null>>;
+  setMyCardId: Dispatch<SetStateAction<string | null>>;
+  setMyKillTarget: Dispatch<SetStateAction<string | null>>;
+  setNotices: Dispatch<SetStateAction<Notice[]>>;
   setChat: Dispatch<SetStateAction<ChatMessage[]>>;
   setConnection: Dispatch<SetStateAction<ConnectionState>>;
   setHasSession: Dispatch<SetStateAction<boolean>>;
@@ -35,6 +41,10 @@ export function useRoomConnection({
   setRoom,
   setRole,
   setWallet,
+  setMyVote,
+  setMyCardId,
+  setMyKillTarget,
+  setNotices,
   setChat,
   setConnection,
   setHasSession,
@@ -91,6 +101,18 @@ export function useRoomConnection({
         updateIdentity({ nickname });
         setNickname(nickname);
         setMyNickname(nickname);
+      } else if (event.type === "myCard") {
+        setMyCardId((event.payload as { cardId: string | null }).cardId);
+      } else if (event.type === "myKillTarget") {
+        setMyKillTarget((event.payload as { target: string | null }).target);
+      } else if (event.type === "notice") {
+        const { message } = event.payload as { message: string };
+        setNotices((notices) => [
+          ...notices.slice(-4),
+          { id: Date.now() + Math.random(), message },
+        ]);
+      } else if (event.type === "myVote") {
+        setMyVote(event.payload as MyVote);
       } else if (event.type === "wallet") {
         setWallet(event.payload as Wallet);
       } else if (event.type === "role") {
@@ -109,10 +131,16 @@ export function useRoomConnection({
           room: Room;
           role: Role | null;
           wallet: Wallet | null;
+          myVote: MyVote | null;
+          myCard: { cardId: string | null } | null;
+          myKillTarget: { target: string | null } | null;
         };
         setRoom(snapshot.room);
         setRole(snapshot.role);
         setWallet(snapshot.wallet);
+        setMyVote(snapshot.myVote);
+        setMyCardId(snapshot.myCard?.cardId ?? null);
+        setMyKillTarget(snapshot.myKillTarget?.target ?? null);
       }
     },
     [
@@ -122,6 +150,10 @@ export function useRoomConnection({
       setNickname,
       setRole,
       setWallet,
+      setMyVote,
+      setMyCardId,
+      setMyKillTarget,
+      setNotices,
       setRoom,
       subscribeRoom,
       updateIdentity,
@@ -146,6 +178,10 @@ export function useRoomConnection({
       setChat([]);
       setRole(null);
       setWallet(null);
+      setMyVote(null);
+      setMyCardId(null);
+      setMyKillTarget(null);
+      setNotices([]);
       setConnection("connecting");
       navigate("/waiting");
       const scheme = window.location.protocol === "https:" ? "wss" : "ws";
@@ -183,6 +219,10 @@ export function useRoomConnection({
             setRoom(null);
             setRole(null);
             setWallet(null);
+            setMyVote(null);
+            setMyCardId(null);
+            setMyKillTarget(null);
+            setNotices([]);
             setConnection("idle");
             setError(
               "재접속할 수 있는 시간이 지났거나 세션이 만료됐습니다. 다시 입장해 주세요.",
@@ -208,6 +248,10 @@ export function useRoomConnection({
       setConnection,
       setRole,
       setWallet,
+      setMyVote,
+      setMyCardId,
+      setMyKillTarget,
+      setNotices,
       setError,
       setHasSession,
       setMyNickname,
@@ -273,6 +317,10 @@ export function useRoomConnection({
     setRoom(null);
     setRole(null);
     setWallet(null);
+    setMyVote(null);
+    setMyCardId(null);
+    setMyKillTarget(null);
+    setNotices([]);
     setChat([]);
     setConnection("idle");
     setError("");
@@ -286,6 +334,10 @@ export function useRoomConnection({
     setRole,
     setRoom,
     setWallet,
+    setMyVote,
+    setMyCardId,
+    setMyKillTarget,
+    setNotices,
   ]);
 
   return { connectToRoom, publish, leaveRoom };

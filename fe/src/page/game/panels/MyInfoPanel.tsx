@@ -1,10 +1,21 @@
-import type { Wallet } from "../../../context/gameTypes";
+import type { CardCatalog, Wallet } from "../../../context/gameTypes";
 import { lightPanel } from "../styles";
 
-const CARD_GRADES = [
-  { name: "일반", price: 1, className: "bg-green-700 border-green-900" },
-  { name: "희귀", price: 3, className: "bg-blue-700 border-blue-900" },
-  { name: "전설", price: 5, className: "bg-purple-700 border-purple-900" },
+// 뽑기 등급. 가격은 카드 데이터(cards.json)에서 가져온다.
+export type CardTierKey = "COMMON" | "RARE" | "LEGENDARY";
+
+const CARD_GRADES: {
+  key: CardTierKey;
+  name: "일반" | "희귀" | "전설";
+  className: string;
+}[] = [
+  { key: "COMMON", name: "일반", className: "bg-green-700 border-green-900" },
+  { key: "RARE", name: "희귀", className: "bg-blue-700 border-blue-900" },
+  {
+    key: "LEGENDARY",
+    name: "전설",
+    className: "bg-purple-700 border-purple-900",
+  },
 ];
 
 export default function MyInfoPanel({
@@ -12,11 +23,16 @@ export default function MyInfoPanel({
   coinPrice,
   isConnected,
   onExchangeCoin,
+  catalog,
+  onDrawCard,
 }: {
   wallet: Wallet | null;
   coinPrice: number;
   isConnected: boolean;
   onExchangeCoin: () => void;
+  catalog: CardCatalog | null;
+  // 카드를 뽑을 수 있을 때만 넘긴다. (라운드 중, 생존자만)
+  onDrawCard?: (tier: CardTierKey) => void;
 }) {
   const canExchange =
     isConnected && wallet !== null && wallet.gold >= coinPrice;
@@ -58,26 +74,33 @@ export default function MyInfoPanel({
       <p className="mb-2 text-sm text-amber-950/70">
         원하는 등급의 인물 카드를 골드로 뽑을 수 있습니다.
       </p>
-      {/* TODO: 카드 구매는 인물 카드 구현 때 연결한다. */}
       <div className="flex flex-col gap-2">
-        {CARD_GRADES.map((grade) => (
-          <button
-            key={grade.name}
-            type="button"
-            disabled
-            className={`flex min-h-11 items-center justify-between rounded-lg border-2 px-3 py-2 text-left text-white disabled:cursor-not-allowed disabled:opacity-60 ${grade.className}`}
-          >
-            <span>
-              <span className="block font-bold">
-                {grade.name} 뽑기 ({grade.price}G)
+        {CARD_GRADES.map((grade) => {
+          const price = catalog?.cards.find(
+            (card) => card.tier === grade.name,
+          )?.price;
+          const affordable =
+            price !== undefined && wallet !== null && wallet.gold >= price;
+          return (
+            <button
+              key={grade.name}
+              type="button"
+              disabled={!onDrawCard || !affordable}
+              onClick={() => onDrawCard?.(grade.key)}
+              className={`flex min-h-11 items-center justify-between rounded-lg border-2 px-3 py-2 text-left text-white transition enabled:hover:brightness-110 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${grade.className}`}
+            >
+              <span>
+                <span className="block font-bold">
+                  {grade.name} 뽑기 ({price ?? "-"}G)
+                </span>
+                <span className="text-sm text-white/80">
+                  {grade.name} 등급 카드 획득
+                </span>
               </span>
-              <span className="text-sm text-white/80">
-                {grade.name} 등급 카드 획득
-              </span>
-            </span>
-            <span className="text-xl font-bold">{grade.price}</span>
-          </button>
-        ))}
+              <span className="text-xl font-bold">{price ?? "-"}</span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );

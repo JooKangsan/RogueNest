@@ -27,10 +27,11 @@ const TONE_OUTER: Record<CardTone, string> = {
 
 const INNER_LINE = "border-[0.6cqw] border-[#dcc6a3]";
 
+// 그림 칸은 높이를 고정해서 글이 길어도 줄어들지 않는다.
 function CardArt({ card }: { card: GameCardContent }) {
   return (
     <div
-      className={`relative flex-[1.15] overflow-hidden rounded-[3cqw] bg-[#efe2cb] ${INNER_LINE}`}
+      className={`relative h-[40%] shrink-0 overflow-hidden rounded-[3cqw] bg-[#efe2cb] ${INNER_LINE}`}
     >
       {card.image ? (
         <img src={card.image} alt="" className="size-full object-contain" />
@@ -112,42 +113,42 @@ export function GameCard({
         <div
           className={`flex size-full flex-col gap-[3.5cqw] rounded-[4cqw] p-[4cqw] ${INNER_LINE}`}
         >
-          <h2 className="text-center text-[8cqw] font-bold leading-tight">
+          <h2 className="-mb-[1.5cqw] -mt-[1.5cqw] text-center text-[9.5cqw] font-bold leading-none">
             {card.title}
           </h2>
           <CardArt card={card} />
+          {/* 글 칸: 왼쪽 정렬. 설명 → 효과, 맨 아래 해시태그(+액티브 버튼) */}
           <div
-            className={`flex flex-1 flex-col justify-center gap-[2cqw] rounded-[3cqw] bg-[#f9f2e5] p-[4.5cqw] text-center text-[4.8cqw] leading-snug ${INNER_LINE}`}
+            className={`flex min-h-0 flex-1 flex-col gap-[2cqw] overflow-hidden rounded-[3cqw] bg-[#f9f2e5] p-[4.5cqw] text-left text-[5.6cqw] leading-snug ${INNER_LINE}`}
           >
-            <>
-              {card.description && (
-                <p className="text-[#6b4a2e]">{card.description}</p>
-              )}
+            {card.description && (
               <p>
-                <span className="font-bold">카드 효과 : </span>
-                {card.effect}
+                <span className="font-bold">카드 설명 : </span>
+                {card.description}
               </p>
-              {(card.hashtags?.length || card.action) && (
-                <div className="mt-[1cqw] flex items-center justify-center gap-[2cqw]">
-                  {card.hashtags && card.hashtags.length > 0 && (
-                    <p className="text-[4cqw] font-bold text-[#8a6440]">
-                      {card.hashtags.map((tag) => `#${tag}`).join(" ")}
-                    </p>
-                  )}
-                  {card.action && (
-                    <button
-                      type="button"
-                      tabIndex={interactive ? undefined : -1}
-                      className={`min-h-11 shrink-0 rounded-[2.5cqw] border-[0.8cqw] border-[#5a3a22] bg-[#fffaf0] px-[3cqw] font-bold transition enabled:hover:bg-white disabled:opacity-40 ${interactive ? "" : "pointer-events-none"}`}
-                      disabled={card.action.disabled}
-                      onClick={card.action.onClick}
-                    >
-                      {card.action.label}
-                    </button>
-                  )}
-                </div>
-              )}
-            </>
+            )}
+            <p>
+              <span className="font-bold">카드 효과 : </span>
+              {card.effect}
+            </p>
+            {(card.hashtags?.length || card.action) && (
+              <div className="mt-auto flex items-end justify-between gap-[2cqw]">
+                <p className="text-[5.2cqw] font-bold">
+                  {card.hashtags?.map((tag) => `#${tag}`).join(", ")}
+                </p>
+                {card.action && (
+                  <button
+                    type="button"
+                    tabIndex={interactive ? undefined : -1}
+                    className={`min-h-11 shrink-0 rounded-[2.5cqw] border-[0.8cqw] border-[#5a3a22] bg-[#fffaf0] px-[3cqw] font-bold transition enabled:hover:bg-white disabled:opacity-40 ${interactive ? "" : "pointer-events-none"}`}
+                    disabled={card.action.disabled}
+                    onClick={card.action.onClick}
+                  >
+                    {card.action.label}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </article>

@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import type { Role } from "../../../context/gameTypes";
+import type { CardDefinition, Role } from "../../../context/gameTypes";
+import { getCardImage } from "../cardImages";
 import { CardModal, GameCard, type GameCardContent } from "../GameCard";
 import { ROLE_INFO, getRoleImage } from "../roles";
 import { lightPanel } from "../styles";
@@ -25,7 +26,29 @@ function roleCard(role: Role | null): GameCardContent {
   };
 }
 
-// TODO: 보유한 인물 카드가 생기면 cards.json 데이터(이름/등급/설명/효과/시너지/이미지)로 채운다.
+const TIER_TONE = {
+  일반: "common",
+  희귀: "rare",
+  전설: "legendary",
+} as const;
+
+function characterCard(card: CardDefinition): GameCardContent {
+  return {
+    layout: "character",
+    title: `${card.name} (${card.tier})`,
+    tone: TIER_TONE[card.tier],
+    image: getCardImage(card.image),
+    symbol: "?",
+    description: card.description ?? undefined,
+    effect: card.effect,
+    hashtags: card.synergyTags,
+    // TODO: 액티브 카드 사용은 카드 효과 구현 때 연결한다. (토론 단계에서만, 사용 전 확인 창)
+    action: card.active
+      ? { label: "사용", disabled: true, onClick: () => {} }
+      : undefined,
+  };
+}
+
 const EMPTY_CHARACTER_CARD: GameCardContent = {
   layout: "character",
   title: "인물카드",
@@ -64,9 +87,12 @@ function MiniCard({
 
 export default function CardsPanel({
   role,
+  card,
   freeReroll = null,
 }: {
   role: Role | null;
+  // 보유한 인물 카드. 없으면 null
+  card: CardDefinition | null;
   // 무료로 다시 뽑을 수 있을 때만 넘긴다. 없으면 다시 뽑기 버튼은 비활성.
   // TODO: 인물 카드 구현 때 아래 두 경우에 연결한다.
   //  - 다알아 박사님 보유 (일반 → 희귀, 희귀 → 전설 1회)
@@ -80,7 +106,14 @@ export default function CardsPanel({
   const closeCard = useCallback(() => setOpenCard(null), []);
 
   const jobCard = roleCard(role);
-  const characterCard = EMPTY_CHARACTER_CARD;
+  const heldCard = card ? characterCard(card) : EMPTY_CHARACTER_CARD;
+
+  // 새 카드를 뽑으면 확대 카드로 바로 보여준다.
+  const [shownCardId, setShownCardId] = useState(card?.id ?? null);
+  if ((card?.id ?? null) !== shownCardId) {
+    setShownCardId(card?.id ?? null);
+    if (card) setOpenCard({ card: characterCard(card), origin: null });
+  }
 
   return (
     <section aria-label="내 카드" className={`${lightPanel} p-3`}>
@@ -106,8 +139,8 @@ export default function CardsPanel({
         </MiniCard>
         <MiniCard
           label="인물카드"
-          card={characterCard}
-          onOpen={(origin) => setOpenCard({ card: characterCard, origin })}
+          card={heldCard}
+          onOpen={(origin) => setOpenCard({ card: heldCard, origin })}
         >
           {/* TODO: 인물 카드 공개는 인물 카드 구현 때 연결한다. */}
           <button

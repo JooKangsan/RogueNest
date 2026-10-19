@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
   type PropsWithChildren,
@@ -10,6 +11,8 @@ import { readStoredJoin } from "./gameSession";
 import type {
   ChatMessage,
   ConnectionState,
+  MyVote,
+  Notice,
   Player,
   Role,
   Room,
@@ -23,6 +26,13 @@ type GameContextValue = {
   room: Room | null;
   role: Role | null;
   wallet: Wallet | null;
+  myVote: MyVote | null;
+  // 보유한 인물 카드 id (본인만 앎)
+  myCardId: string | null;
+  // 살인마가 이번 밤에 고른 살해 대상 닉네임 (본인만 앎)
+  myKillTarget: string | null;
+  notices: Notice[];
+  dismissNotice: (id: number) => void;
   hasSession: boolean;
   myPlayer: Player | undefined;
   chat: ChatMessage[];
@@ -49,6 +59,15 @@ export function GameProvider({ children }: PropsWithChildren) {
   const [room, setRoom] = useState<Room | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [myVote, setMyVote] = useState<MyVote | null>(null);
+  const [myCardId, setMyCardId] = useState<string | null>(null);
+  const [myKillTarget, setMyKillTarget] = useState<string | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const dismissNotice = useCallback(
+    (id: number) =>
+      setNotices((current) => current.filter((notice) => notice.id !== id)),
+    [],
+  );
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [connection, setConnection] = useState<ConnectionState>("idle");
   const [busy, setBusy] = useState(false);
@@ -63,6 +82,10 @@ export function GameProvider({ children }: PropsWithChildren) {
     setRoom,
     setRole,
     setWallet,
+    setMyVote,
+    setMyCardId,
+    setMyKillTarget,
+    setNotices,
     setChat,
     setConnection,
     setHasSession,
@@ -124,6 +147,11 @@ export function GameProvider({ children }: PropsWithChildren) {
         room,
         role,
         wallet,
+        myVote,
+        myCardId,
+        myKillTarget,
+        notices,
+        dismissNotice,
         hasSession,
         myPlayer,
         chat,

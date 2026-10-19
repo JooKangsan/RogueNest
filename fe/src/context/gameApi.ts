@@ -1,4 +1,4 @@
-import type { JoinResponse, RoomSummary } from "./gameTypes";
+import type { CardCatalog, JoinResponse, RoomSummary } from "./gameTypes";
 
 async function request<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(path, {
@@ -32,6 +32,10 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
   }
   if (data === null) throw new Error("서버 응답이 비어 있습니다.");
   return data as T;
+}
+
+export function getCardCatalog() {
+  return request<CardCatalog>("/api/meta/cards");
 }
 
 export function getRooms() {

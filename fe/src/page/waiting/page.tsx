@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import waitingBackground from "../../assets/waiting_page.webp";
-import Avatar from "../../components/Avatar";
+import HoodCharacter from "../../components/HoodCharacter";
 import { avatarColor } from "../../components/avatarColor";
 import ChatPanel from "../../components/ChatPanel";
 import { NumberSetting } from "../../components/NumberSetting";
@@ -37,7 +37,7 @@ function PlayerCard({
         isMe ? "border-amber-700" : "border-amber-900/20"
       }`}
     >
-      <Avatar color={color} />
+      <HoodCharacter pose="head" color={color} className="w-10 shrink-0" />
       <span className="flex min-w-0 flex-1 items-center gap-1 text-amber-950">
         <span className="truncate">{player.nickname}</span>
         {player.host && <span aria-label="방장">👑</span>}
