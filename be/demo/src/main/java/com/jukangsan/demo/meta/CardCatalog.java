@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 public final class CardCatalog {
 	private final List<CardDefinition> cards;
 	private final List<SynergyDefinition> synergies;
+	// 카드별 효과 (서버 판정용). 화면에 보여주는 설명은 CardDefinition.effect 문구를 쓴다.
+	private final Map<String, List<CardEffect>> effectsByCardId;
 
 	public CardCatalog(ObjectMapper objectMapper) {
 		CatalogData data;
@@ -62,6 +64,15 @@ public final class CardCatalog {
 				.map(synergy -> new SynergyDefinition(synergy.id(), synergy.name(),
 						List.copyOf(synergyCardNames.get(synergy.name())), synergy.requirement()))
 				.toList();
+		Map<String, List<CardEffect>> effects = new LinkedHashMap<>();
+		for (CardData card : data.cards()) {
+			List<CardEffect> cardEffects = card.effects() == null ? List.of() : List.copyOf(card.effects());
+			for (CardEffect effect : cardEffects) {
+				validateEffect(card.id(), effect);
+			}
+			effects.put(card.id(), cardEffects);
+		}
+		this.effectsByCardId = Map.copyOf(effects);
 		this.cards = data.cards().stream()
 				.map(card -> new CardDefinition(card.id(), card.name(), card.tier(), card.price(),
 						card.effect(), blankToNull(card.description()), blankToNull(card.image()), card.active(),
@@ -75,6 +86,50 @@ public final class CardCatalog {
 
 	public List<SynergyDefinition> synergies() {
 		return synergies;
+	}
+
+	public List<CardEffect> effectsOf(String cardId) {
+		return cardId == null ? List.of() : effectsByCardId.getOrDefault(cardId, List.of());
+	}
+
+	private static void validateEffect(String cardId, CardEffect effect) {
+		if (effect.trigger() == null || effect.action() == null || effect.amount() < 0) {
+			throw new IllegalStateException("카드 '" + cardId + "'의 효과 정의가 올바르지 않습니다.");
+		}
+		if (effect.trigger() == EffectTrigger.PLAYER_CAUGHT
+				&& (effect.caughtRoles() == null || effect.caughtRoles().isEmpty())) {
+			throw new IllegalStateException("카드 '" + cardId + "'의 검거 효과에 caughtRoles가 없습니다.");
+		}
+	}
+
+	// 발동 시점
+	public enum EffectTrigger {
+		// 턴 정산 (생존자 1G 지급 시점)
+		TURN_END,
+		// 라운드 종료 정산
+		ROUND_END,
+		// 플레이어 검거 (투표, 도적 탈주)
+		PLAYER_CAUGHT
+	}
+
+	// 효과
+	public enum EffectAction {
+		// amount G 획득
+		GAIN_GOLD,
+		// 라운드 종료 보상을 amount G로 바꿈
+		SET_ROUND_REWARD
+	}
+
+	// 발동 시점 / 조건 / 효과. 조건은 필요한 것만 채운다.
+	//   caughtRoles: PLAYER_CAUGHT에서 검거된 사람의 직업이 이 중 하나일 때
+	//   maxTurn: 이 턴 이내일 때
+	public record CardEffect(
+			EffectTrigger trigger,
+			List<String> caughtRoles,
+			Integer maxTurn,
+			EffectAction action,
+			int amount
+	) {
 	}
 
 	public record CardDefinition(
@@ -106,6 +161,6 @@ public final class CardCatalog {
 	}
 
 	private record CardData(String id, String name, String tier, int price, String effect,
-			String description, String image, List<String> synergies, boolean active) {
+			String description, String image, List<String> synergies, boolean active, List<CardEffect> effects) {
 	}
 }

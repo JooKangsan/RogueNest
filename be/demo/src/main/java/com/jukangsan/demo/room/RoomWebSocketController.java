@@ -1,8 +1,11 @@
 package com.jukangsan.demo.room;
 
 import com.jukangsan.demo.room.RoomDtos.ChatRequest;
+import com.jukangsan.demo.room.RoomDtos.DrawCardRequest;
+import com.jukangsan.demo.room.RoomDtos.KillRequest;
 import com.jukangsan.demo.room.RoomDtos.NicknameRequest;
 import com.jukangsan.demo.room.RoomDtos.RenameRoomRequest;
+import com.jukangsan.demo.room.RoomDtos.VoteRequest;
 import com.jukangsan.demo.room.RoomDtos.SettingsRequest;
 import jakarta.validation.Valid;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -61,6 +64,31 @@ public class RoomWebSocketController {
 	@SendToUser(destinations = "/queue/private", broadcast = false)
 	public RoomDtos.RoomEvent handleRoomException(RoomException exception) {
 		return RoomDtos.RoomEvent.of("error", new RoomDtos.ErrorResponse(exception.code(), exception.getMessage()));
+	}
+
+	@MessageMapping("/rooms/{roomName}/vote")
+	public void vote(@DestinationVariable String roomName, VoteRequest request, Principal principal) {
+		roomService.castVote(session(principal), roomName, request.target(), request.abstain());
+	}
+
+	@MessageMapping("/rooms/{roomName}/kill")
+	public void kill(@DestinationVariable String roomName, KillRequest request, Principal principal) {
+		roomService.chooseKillTarget(session(principal), roomName, request.target());
+	}
+
+	@MessageMapping("/rooms/{roomName}/reveal")
+	public void reveal(@DestinationVariable String roomName, Principal principal) {
+		roomService.revealCard(session(principal), roomName);
+	}
+
+	@MessageMapping("/rooms/{roomName}/draw")
+	public void draw(@DestinationVariable String roomName, DrawCardRequest request, Principal principal) {
+		roomService.drawCard(session(principal), roomName, request.tier());
+	}
+
+	@MessageMapping("/rooms/{roomName}/next")
+	public void next(@DestinationVariable String roomName, Principal principal) {
+		roomService.skipRoundEnd(session(principal), roomName);
 	}
 
 	@MessageMapping("/rooms/{roomName}/exchange")

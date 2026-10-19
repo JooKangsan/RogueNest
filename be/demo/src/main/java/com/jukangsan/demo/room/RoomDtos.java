@@ -31,7 +31,11 @@ public final class RoomDtos {
 	public record JoinRoomResponse(String roomName, String nickname, String sessionToken) {
 	}
 
-	public record PlayerView(String nickname, boolean host, boolean ready) {
+	// voted: 이번 턴 투표(기권 포함)를 마쳤는지, votes: 이번 턴 받은 표 수.
+	// 누가 누구를 찍었는지는 공개하지 않는다.
+	// revealedCardId: 공개한 인물 카드. 비공개면 null
+	public record PlayerView(String nickname, boolean host, boolean ready, boolean voted, int votes,
+			boolean alive, boolean onTrial, String revealedCardId) {
 	}
 
 	public record RoomView(
@@ -44,7 +48,11 @@ public final class RoomDtos {
 			int turn,
 			Instant phaseEndsAt,
 			int minPlayers,
-			int maxTurns
+			int maxTurns,
+			VoteResultView voteResult,
+			RoundSummaryView roundSummary,
+			// 지난밤 살인마에게 살해된 플레이어. 없으면 null
+			String nightVictim
 	) {
 	}
 
@@ -68,6 +76,49 @@ public final class RoomDtos {
 	public record NicknameChanged(String nickname) {
 	}
 
+	// 투표 결과. kind: THIEF_CAUGHT / MURDERER_CAUGHT / CITIZEN_DIED / NO_ONE / THIEF_LEFT(도적 탈주 = 검거 처리)
+	//   / THIEF_KILLED(살인마가 밤에 도적을 처치)
+	// 시민이 투표로 죽은 경우 직업은 공개하지 않으므로 kind만으로 구분한다.
+	public record VoteResultView(String kind, List<String> nicknames) {
+	}
+
+	// tier: COMMON / RARE / LEGENDARY
+	public record DrawCardRequest(String tier) {
+	}
+
+	// 본인 보유 인물 카드. 없으면 cardId=null
+	public record MyCardView(String cardId) {
+	}
+
+	// 라운드 종료 결과. 라운드가 끝나면 직업·골드·코인을 모두 공개한다.
+	// thiefCaught: 도적 검거 여부(도적은 미검거 시 승리, 시민·살인마는 검거 시 승리)
+	// finalRound: 마지막 라운드(게임 종료)인지
+	public record RoundSummaryView(int round, boolean thiefCaught, boolean finalRound,
+			List<RoundResultRow> rows) {
+	}
+
+	public record RoundResultRow(String nickname, Role role, int gold, int coins) {
+	}
+
+	public record VoteRequest(String target, boolean abstain) {
+	}
+
+	// 살인마 밤 행동. target=대상 닉네임, null이면 취소
+	public record KillRequest(String target) {
+	}
+
+	// 본인이 고른 살해 대상 닉네임. 없으면 null
+	public record MyKillTargetView(String target) {
+	}
+
+	// 본인에게만 보내는 알림 (강탈 결과 등)
+	public record NoticeView(String message) {
+	}
+
+	// 본인 투표 결과. target=대상 닉네임, abstain=기권. 둘 다 비어 있으면 아직 투표 전.
+	public record MyVoteView(String target, boolean abstain) {
+	}
+
 	public record RoleView(Role role) {
 	}
 
@@ -87,7 +138,8 @@ public final class RoomDtos {
 		}
 	}
 
-	public record PrivateSnapshot(RoomView room, String nickname, Role role, WalletView wallet) {
+	public record PrivateSnapshot(RoomView room, String nickname, Role role, WalletView wallet,
+			MyVoteView myVote, MyCardView myCard, MyKillTargetView myKillTarget) {
 	}
 
 	public record ErrorResponse(String code, String message) {

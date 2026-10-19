@@ -9,7 +9,15 @@
       "description": "칸 그는 위대하다",
       "image": "common_kan.webp",
       "synergies": ["후열의밤", "제육즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "PLAYER_CAUGHT",
+          "caughtRoles": ["THIEF"],
+          "action": "GAIN_GOLD",
+          "amount": 3
+        }
+      ]
     },
     {
       "id": "common_abyss",
@@ -53,7 +61,14 @@
       "description": "야심한 시간 무인 아이스크림 가게에서..",
       "image": "common_ice_cream_smuggler.webp",
       "synergies": ["후열의밤", "미츄"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "TURN_END",
+          "action": "GAIN_GOLD",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "common_dukes_helper",
@@ -64,7 +79,14 @@
       "description": "영국가 귀족이다. 부모님이 주는 용돈이다",
       "image": "common_dukes_helper.webp",
       "synergies": ["대감님", "로즈&펄"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "TURN_END",
+          "action": "GAIN_GOLD",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "common_know_it_all",
@@ -130,7 +152,15 @@
       "description": "뱀파이어 헌터. 옆에 있는 뱀파이어는 왜 안잡는지 모르겠다. ",
       "image": "common_vampire_hunter.webp",
       "synergies": ["대감님", "골실즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "PLAYER_CAUGHT",
+          "caughtRoles": ["THIEF", "MURDERER"],
+          "action": "GAIN_GOLD",
+          "amount": 4
+        }
+      ]
     },
     {
       "id": "common_speedrun",
@@ -141,7 +171,16 @@
       "description": "모든 걸 공략하는 사람. 스피드런을 좋아한다.",
       "image": "common_speedrun.webp",
       "synergies": ["제육즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "PLAYER_CAUGHT",
+          "caughtRoles": ["THIEF"],
+          "action": "GAIN_GOLD",
+          "amount": 7,
+          "maxTurn": 3
+        }
+      ]
     },
     {
       "id": "common_veteran",
@@ -152,7 +191,16 @@
       "description": "초반에 못하는 척 하고 뉴비 손발 돌려버린 경험이 있다.",
       "image": "common_veteran.webp",
       "synergies": [],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "PLAYER_CAUGHT",
+          "caughtRoles": ["THIEF"],
+          "action": "GAIN_GOLD",
+          "amount": 4,
+          "maxTurn": 5
+        }
+      ]
     },
     {
       "id": "common_lawyer",
@@ -174,7 +222,14 @@
       "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
       "image": "common_miser.webp",
       "synergies": ["과거인"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROUND_END",
+          "action": "SET_ROUND_REWARD",
+          "amount": 5
+        }
+      ]
     },
     {
       "id": "common_sea_dragon",
@@ -198,7 +253,6 @@
       "synergies": ["마이러부", "미츄"],
       "active": false
     },
-
     {
       "id": "rare_kan",
       "name": "칸",
@@ -208,7 +262,15 @@
       "description": "여기 저기서 대감님 취급을 받는다. 빨간 페도라가 잘 어울린다.",
       "image": "rare_kan.webp",
       "synergies": ["후열의밤", "제육즈", "대감님"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "PLAYER_CAUGHT",
+          "caughtRoles": ["THIEF"],
+          "action": "GAIN_GOLD",
+          "amount": 5
+        }
+      ]
     },
     {
       "id": "rare_abyss",
@@ -241,7 +303,14 @@
       "description": "야심한 시간 무인 아이스크림 가게에서..",
       "image": "rare_ice_cream_smuggler.webp",
       "synergies": ["후열의밤", "미츄"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "TURN_END",
+          "action": "GAIN_GOLD",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "rare_luck",
@@ -252,7 +321,14 @@
       "description": "행운의 네잎클로버.",
       "image": "rare_luck.webp",
       "synergies": ["마이러부"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "TURN_END",
+          "action": "GAIN_GOLD",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "rare_know_it_all",
@@ -318,7 +394,15 @@
       "description": "뱀파이어 헌터. 성악을 잘 한다. ",
       "image": "rare_vampire_hunter.webp",
       "synergies": ["대감님", "골실즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "PLAYER_CAUGHT",
+          "caughtRoles": ["THIEF", "MURDERER"],
+          "action": "GAIN_GOLD",
+          "amount": 6
+        }
+      ]
     },
     {
       "id": "rare_captains_spirit",
@@ -362,7 +446,14 @@
       "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
       "image": "rare_miser.webp",
       "synergies": ["과거인"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROUND_END",
+          "action": "SET_ROUND_REWARD",
+          "amount": 7
+        }
+      ]
     },
     {
       "id": "rare_loafer",
@@ -375,7 +466,6 @@
       "synergies": ["후열의밤", "로열"],
       "active": false
     },
-
     {
       "id": "legendary_kan",
       "name": "칸",
@@ -385,7 +475,15 @@
       "description": "칸이라는 별명을 그렇게 좋아하지 않는다. 오타쿠다.",
       "image": "legendary_kan.webp",
       "synergies": ["후열의밤", "로열", "제육즈", "대감님"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "PLAYER_CAUGHT",
+          "caughtRoles": ["THIEF"],
+          "action": "GAIN_GOLD",
+          "amount": 8
+        }
+      ]
     },
     {
       "id": "legendary_abyss",
@@ -429,7 +527,14 @@
       "description": "이젠 베스킨라빈스다.",
       "image": "legendary_ice_cream_smuggler.webp",
       "synergies": ["후열의밤", "미츄"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "TURN_END",
+          "action": "GAIN_GOLD",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "legendary_dukes_helper",
@@ -440,7 +545,14 @@
       "description": "영국 공작가 넷째 딸.",
       "image": "legendary_dukes_helper.webp",
       "synergies": ["대감님", "로즈&펄"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "TURN_END",
+          "action": "GAIN_GOLD",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "legendary_luck",
@@ -451,7 +563,14 @@
       "description": "행운의 네잎클로버 여자가 많이 꼬인다는 말이 있다.",
       "image": "legendary_luck.webp",
       "synergies": ["마이러부"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "TURN_END",
+          "action": "GAIN_GOLD",
+          "amount": 3
+        }
+      ]
     },
     {
       "id": "legendary_witch",
@@ -506,7 +625,15 @@
       "description": "뱀파이어 헌터. 늘 바쁘다.",
       "image": "legendary_vampire_hunter.webp",
       "synergies": ["대감님", "골실즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "PLAYER_CAUGHT",
+          "caughtRoles": ["THIEF", "MURDERER"],
+          "action": "GAIN_GOLD",
+          "amount": 8
+        }
+      ]
     },
     {
       "id": "legendary_miser",
@@ -517,7 +644,14 @@
       "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
       "image": "legendary_miser.webp",
       "synergies": ["과거인"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROUND_END",
+          "action": "SET_ROUND_REWARD",
+          "amount": 10
+        }
+      ]
     },
     {
       "id": "legendary_loafer",
