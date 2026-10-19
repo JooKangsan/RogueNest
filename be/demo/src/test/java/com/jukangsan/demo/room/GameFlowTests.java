@@ -471,4 +471,242 @@ class GameFlowTests {
 		assertThat(roomService.walletOf(hunter).gold()).isEqualTo(60 + 1 + 7 + 3);
 		assertThat(roomService.walletOf(thief).gold()).isEqualTo(60 + 3);
 	}
+
+	private List<Integer> goldOfOthers(List<RoomService.PlayerSession> sessions, RoomService.PlayerSession except) {
+		return sessions.stream()
+				.filter(session -> session != except)
+				.map(session -> roomService.walletOf(session).gold())
+				.toList();
+	}
+
+	// 4명 방, 도적을 뺀 나머지 전원에게 같은 카드를 준다 (강탈 대상이 누구든 결과가 같도록)
+	private List<RoomService.PlayerSession> othersHold(String roomName, String cardId) throws Exception {
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+		sessions.stream().filter(session -> session != thief).forEach(session -> giveCard(session, cardId));
+		return sessions;
+	}
+
+	@Test
+	void steelHelmetNullifiesRobbery() throws Exception {
+		String roomName = "Helmet Lobby";
+		var sessions = othersHold(roomName, "common_steel_helmet");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+
+		abstainAllUntilNight(roomName, sessions);
+
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(61);
+		assertThat(goldOfOthers(sessions, thief)).containsOnly(61);
+	}
+
+	@Test
+	void vampireDrainsThiefWhenRobbed() throws Exception {
+		String roomName = "Vampire Lobby";
+		var sessions = othersHold(roomName, "legendary_vampire");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+
+		abstainAllUntilNight(roomName, sessions);
+
+		// 피해자: 61 - 1 + 3, 도적: 61 + 1 - 3
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(59);
+		assertThat(goldOfOthers(sessions, thief)).containsExactlyInAnyOrder(63, 61, 61);
+	}
+
+	@Test
+	void abyssSealsRobberyForNextTurn() throws Exception {
+		String roomName = "Abyss Lobby";
+		var sessions = othersHold(roomName, "common_abyss");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+
+		abstainAllUntilNight(roomName, sessions);
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(62);
+		Thread.sleep(1_000); // 밤 → 2턴 토론
+		abstainAllUntilNight(roomName, sessions);
+
+		// 2턴 강탈은 봉인: 턴 1G만 받는다
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(63);
+	}
+
+	@Test
+	void ninjaThiefRobsOneMorePlayer() throws Exception {
+		String roomName = "Ninja Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+		giveCard(thief, "common_self_proclaimed_ninja");
+
+		abstainAllUntilNight(roomName, sessions);
+
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(63);
+		assertThat(goldOfOthers(sessions, thief)).containsExactlyInAnyOrder(60, 60, 61);
+	}
+
+	@Test
+	void seaDragonBlocksFirstRobberyAndPaysAtRoundEndIfNeverRobbed() throws Exception {
+		String roomName = "Sea Dragon Lobby";
+		var sessions = othersHold(roomName, "common_sea_dragon");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+
+		abstainAllUntilNight(roomName, sessions);
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(61);
+		Thread.sleep(1_000); // 밤 → 2턴 토론
+
+		for (RoomService.PlayerSession session : sessions) {
+			roomService.castVote(session, roomName, nicknameOf(thief), false);
+		}
+		Thread.sleep(2_300); // 최종 투표 → 결과 → 라운드 종료
+
+		// 61 + 검거 1G + 라운드 종료 3G + 해룡 5G
+		assertThat(goldOfOthers(sessions, thief)).containsOnly(70);
+	}
+
+	@Test
+	void lawyerMurdererSurvivesCatchAsCitizen() throws Exception {
+		String roomName = "Lawyer Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		RoomService.PlayerSession murderer = sessionWithRole(sessions, Role.MURDERER);
+		giveCard(murderer, "common_lawyer");
+
+		for (RoomService.PlayerSession session : sessions) {
+			roomService.castVote(session, roomName, nicknameOf(murderer), false);
+		}
+		Thread.sleep(1_300);
+
+		var result = roomService.getPublicRoom(roomName);
+		assertThat(result.voteResult().kind()).isEqualTo("MURDERER_CAUGHT");
+		assertThat(viewOf(roomName, nicknameOf(murderer)).alive()).isTrue();
+		assertThat(roomService.roleOf(murderer)).isEqualTo(Role.CITIZEN);
+	}
+
+	@Test
+	void rareSteelHelmetNullifiesKill() throws Exception {
+		String roomName = "Kill Helmet Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라", "마");
+		RoomService.PlayerSession murderer = sessionWithRole(sessions, Role.MURDERER);
+		RoomService.PlayerSession citizen = sessionWithRole(sessions, Role.CITIZEN);
+		giveCard(citizen, "rare_steel_helmet");
+
+		abstainAllUntilNight(roomName, sessions);
+		int goldBefore = roomService.walletOf(murderer).gold();
+		roomService.chooseKillTarget(murderer, roomName, nicknameOf(citizen));
+		Thread.sleep(1_000);
+
+		var nextTurn = roomService.getPublicRoom(roomName);
+		assertThat(nextTurn.phase()).isEqualTo("DISCUSSION");
+		assertThat(nextTurn.nightVictim()).isNull();
+		assertThat(viewOf(roomName, nicknameOf(citizen)).alive()).isTrue();
+		assertThat(roomService.walletOf(murderer).gold()).isEqualTo(goldBefore - 1);
+	}
+
+	@Test
+	void witchEndsRoundImmediatelyAndRevealsCard() throws Exception {
+		String roomName = "Witch Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		RoomService.PlayerSession witch = sessionWithRole(sessions, Role.CITIZEN);
+		giveCard(witch, "legendary_witch");
+
+		roomService.activateCard(witch, roomName, null);
+
+		var result = roomService.getPublicRoom(roomName);
+		assertThat(result.phase()).isEqualTo("RESULT");
+		assertThat(result.voteResult().kind()).isEqualTo("WITCH");
+		assertThat(viewOf(roomName, nicknameOf(witch)).revealedCardId()).isEqualTo("legendary_witch");
+		assertThatThrownBy(() -> roomService.activateCard(witch, roomName, null)).isInstanceOf(RoomException.class);
+
+		Thread.sleep(1_000);
+		var roundEnd = roomService.getPublicRoom(roomName);
+		assertThat(roundEnd.phase()).isEqualTo("ROUND_END");
+		assertThat(roundEnd.roundSummary().thiefCaught()).isFalse();
+	}
+
+	@Test
+	void rainBlocksRobberyAndMurderer() throws Exception {
+		String roomName = "Rain Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+		RoomService.PlayerSession murderer = sessionWithRole(sessions, Role.MURDERER);
+		RoomService.PlayerSession citizen = sessionWithRole(sessions, Role.CITIZEN);
+		giveCard(citizen, "rare_rainy_season");
+
+		roomService.activateCard(citizen, roomName, null);
+		assertThat(roomService.getPublicRoom(roomName).rainTurns()).isEqualTo(2);
+		abstainAllUntilNight(roomName, sessions);
+
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(61);
+		assertThat(goldOfOthers(sessions, thief)).containsOnly(61);
+		assertThatThrownBy(() -> roomService.chooseKillTarget(murderer, roomName, nicknameOf(citizen)))
+				.isInstanceOf(RoomException.class);
+
+		Thread.sleep(1_000);
+		assertThat(roomService.getPublicRoom(roomName).rainTurns()).isEqualTo(1);
+	}
+
+	@Test
+	void redCardCatchesThiefAndEndsRound() throws Exception {
+		String roomName = "Red Card Thief Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+		RoomService.PlayerSession citizen = sessionWithRole(sessions, Role.CITIZEN);
+		giveCard(citizen, "rare_red_card");
+
+		roomService.activateCard(citizen, roomName, nicknameOf(thief));
+
+		var result = roomService.getPublicRoom(roomName);
+		assertThat(result.voteResult().kind()).isEqualTo("THIEF_CAUGHT");
+		assertThat(viewOf(roomName, nicknameOf(citizen)).alive()).isTrue();
+	}
+
+	@Test
+	void redCardOnCitizenTakesUserDownToo() throws Exception {
+		String roomName = "Red Card Citizen Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라", "마");
+		List<RoomService.PlayerSession> citizens = sessions.stream()
+				.filter(session -> roomService.roleOf(session) == Role.CITIZEN)
+				.toList();
+		RoomService.PlayerSession user = citizens.get(0);
+		RoomService.PlayerSession target = citizens.get(1);
+		giveCard(user, "rare_red_card");
+		// 레드카드는 대상이 필요하다
+		assertThatThrownBy(() -> roomService.activateCard(user, roomName, null)).isInstanceOf(RoomException.class);
+
+		roomService.activateCard(user, roomName, nicknameOf(target));
+
+		assertThat(roomService.getPublicRoom(roomName).voteResult().kind()).isEqualTo("CITIZEN_DIED");
+		assertThat(viewOf(roomName, nicknameOf(target)).alive()).isFalse();
+		assertThat(viewOf(roomName, nicknameOf(user)).alive()).isFalse();
+	}
+
+	@Test
+	void futurePersonPullsRemainingTurnGold() throws Exception {
+		String roomName = "Future Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+		giveCard(thief, "common_future_person");
+
+		roomService.activateCard(thief, roomName, null);
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(60 + 7);
+
+		abstainAllUntilNight(roomName, sessions);
+		// 턴 골드는 더 받지 않고 강탈 1G만
+		assertThat(roomService.walletOf(thief).gold()).isEqualTo(68);
+	}
+
+	@Test
+	void toughSisterStealsFromChosenPlayerAndWerewolfWaitsForTurnFour() throws Exception {
+		String roomName = "Target Card Lobby";
+		var sessions = startDiscussion(roomName, "가", "나", "다", "라");
+		RoomService.PlayerSession sister = sessions.get(0);
+		RoomService.PlayerSession target = sessions.get(1);
+		RoomService.PlayerSession wolf = sessions.get(2);
+		giveCard(sister, "rare_tough_sister");
+		giveCard(wolf, "legendary_werewolf");
+
+		roomService.activateCard(sister, roomName, nicknameOf(target));
+		assertThat(roomService.walletOf(sister).gold()).isEqualTo(62);
+		assertThat(roomService.walletOf(target).gold()).isEqualTo(58);
+		// 쎈 누나는 공개되지 않는 카드
+		assertThat(viewOf(roomName, nicknameOf(sister)).revealedCardId()).isNull();
+
+		assertThatThrownBy(() -> roomService.activateCard(wolf, roomName, nicknameOf(target)))
+				.isInstanceOf(RoomException.class);
+	}
 }

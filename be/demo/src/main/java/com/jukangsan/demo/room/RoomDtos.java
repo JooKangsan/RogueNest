@@ -52,7 +52,9 @@ public final class RoomDtos {
 			VoteResultView voteResult,
 			RoundSummaryView roundSummary,
 			// 지난밤 살인마에게 살해된 플레이어. 없으면 null
-			String nightVictim
+			String nightVictim,
+			// 장마로 강탈과 살인마 행동이 막힌 남은 턴 수
+			int rainTurns
 	) {
 	}
 
@@ -77,7 +79,8 @@ public final class RoomDtos {
 	}
 
 	// 투표 결과. kind: THIEF_CAUGHT / MURDERER_CAUGHT / CITIZEN_DIED / NO_ONE / THIEF_LEFT(도적 탈주 = 검거 처리)
-	//   / THIEF_KILLED(살인마가 밤에 도적을 처치)
+	//   / THIEF_KILLED(살인마가 밤에 도적을 처치) / THIEF_ASSASSINATED(늑대인간이 도적을 암살)
+	//   / WITCH(마녀가 라운드를 끝냄)
 	// 시민이 투표로 죽은 경우 직업은 공개하지 않으므로 kind만으로 구분한다.
 	public record VoteResultView(String kind, List<String> nicknames) {
 	}
@@ -86,8 +89,8 @@ public final class RoomDtos {
 	public record DrawCardRequest(String tier) {
 	}
 
-	// 본인 보유 인물 카드. 없으면 cardId=null
-	public record MyCardView(String cardId) {
+	// 본인 보유 인물 카드. 없으면 cardId=null. activated: 이번 라운드에 카드 사용 효과를 썼는지
+	public record MyCardView(String cardId, boolean activated) {
 	}
 
 	// 라운드 종료 결과. 라운드가 끝나면 직업·골드·코인을 모두 공개한다.
@@ -105,6 +108,14 @@ public final class RoomDtos {
 
 	// 살인마 밤 행동. target=대상 닉네임, null이면 취소
 	public record KillRequest(String target) {
+	}
+
+	// 인물 카드 사용. 대상을 골라야 하는 카드만 target(닉네임)을 채운다.
+	public record ActivateCardRequest(String target) {
+	}
+
+	// 방 전체 알림 (늑대인간 암살 등)
+	public record AnnouncementView(String message) {
 	}
 
 	// 본인이 고른 살해 대상 닉네임. 없으면 null

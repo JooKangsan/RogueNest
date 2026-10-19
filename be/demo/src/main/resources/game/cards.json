@@ -28,7 +28,14 @@
       "description": "ㅈ같은 짤을 보고 도적은 스턴에 걸렸습니다.",
       "image": "common_abyss.webp",
       "synergies": ["후열의밤", "도파민즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "SEAL_ROBBERY",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "common_dubidu",
@@ -39,7 +46,14 @@
       "description": "강탈을 하러온 도적은 두비두를 같이 하게 되었다...",
       "image": "common_dubidu.webp",
       "synergies": ["후열의밤"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "SEAL_ROBBERY",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "common_strange_food",
@@ -50,7 +64,14 @@
       "description": "그녀가 만든 음식을 먹고 그만...",
       "image": "common_strange_food.webp",
       "synergies": ["제육즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "SEAL_ROBBERY",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "common_ice_cream_smuggler",
@@ -108,7 +129,14 @@
       "description": "주머니를 털어도 아무것도 안나온다. 이미 돈은 다른 사람이 관리하기 때문이다...",
       "image": "common_steel_helmet.webp",
       "synergies": ["후열의밤", "탱커"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "NULLIFY",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "common_future_person",
@@ -119,7 +147,15 @@
       "description": "미래애세 왔다고 주장하는 사람. 짧은 미래에서 돈을 땡겨온다",
       "image": "common_future_person.webp",
       "synergies": ["탱커", "투잡러"],
-      "active": true
+      "active": true,
+      "effects": [
+        {
+          "trigger": "ACTIVATE",
+          "action": "PULL_TURN_GOLD",
+          "label": "당겨오기",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "common_self_proclaimed_ninja",
@@ -130,7 +166,14 @@
       "description": "닌자 호소인. 닌자보다는 이상한 사람에 가깝다.",
       "image": "common_self_proclaimed_ninja.webp",
       "synergies": ["과거인"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBING",
+          "action": "EXTRA_ROBBERY_TARGET",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "common_vampire",
@@ -141,7 +184,14 @@
       "description": "뱀파이어. 외관은 여자지만 남자다.",
       "image": "common_vampire.webp",
       "synergies": ["도파민즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "STEAL_FROM_ROBBER",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "common_vampire_hunter",
@@ -211,7 +261,15 @@
       "description": "변호사. 본인을 변호해 한턴 버틸 수 있다.",
       "image": "common_lawyer.webp",
       "synergies": ["투잡러"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "SELF_CAUGHT",
+          "caughtRoles": ["MURDERER"],
+          "action": "SURVIVE_AS_CITIZEN",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "common_miser",
@@ -240,7 +298,20 @@
       "description": "해룡. 사람 이외의 것과 반짝이는 것 들을 좋아한다.",
       "image": "common_sea_dragon.webp",
       "synergies": ["도파민즈", "마이러부"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "NULLIFY",
+          "maxUses": 1,
+          "amount": 0
+        },
+        {
+          "trigger": "ROUND_END",
+          "action": "GAIN_GOLD_IF_NOT_ROBBED",
+          "amount": 5
+        }
+      ]
     },
     {
       "id": "common_cutest",
@@ -281,7 +352,14 @@
       "description": "ㅈ같은 짤을 난사했다.",
       "image": "rare_abyss.webp",
       "synergies": ["후열의밤", "도파민즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "SEAL_ROBBERY",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "rare_strange_food",
@@ -292,7 +370,14 @@
       "description": "도둑은 그녀가 만든 음식을 먹고 스턴에 걸렸다.",
       "image": "rare_strange_food.webp",
       "synergies": ["제육즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "SEAL_ROBBERY",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "rare_ice_cream_smuggler",
@@ -350,7 +435,19 @@
       "description": "주머니를 털어도 아무것도 안나온다. 이미 돈은 다른 사람이 관리하기 때문이다...",
       "image": "rare_steel_helmet.webp",
       "synergies": ["후열의밤", "탱커"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "NULLIFY",
+          "amount": 0
+        },
+        {
+          "trigger": "KILLED",
+          "action": "NULLIFY",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "rare_rainy_season",
@@ -361,7 +458,15 @@
       "description": "장마를 일으켜 두 턴간 행동을 막는다",
       "image": "rare_rainy_season.webp",
       "synergies": ["후열의밤"],
-      "active": true
+      "active": true,
+      "effects": [
+        {
+          "trigger": "ACTIVATE",
+          "action": "RAIN",
+          "label": "장마",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "rare_indulgence",
@@ -372,7 +477,15 @@
       "description": "수녀님. 이제는 수녀호소인이나 짭수녀일지도 모른다",
       "image": "rare_indulgence.webp",
       "synergies": ["대감님", "로즈&펄"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "SELF_CAUGHT",
+          "caughtRoles": ["MURDERER"],
+          "action": "SURVIVE_AS_CITIZEN",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "rare_vampire",
@@ -383,7 +496,14 @@
       "description": "뱀파이어. 외관은 여자지만 남자다.",
       "image": "rare_vampire.webp",
       "synergies": ["도파민즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "STEAL_FROM_ROBBER",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "rare_vampire_hunter",
@@ -413,7 +533,14 @@
       "description": "149cm의 대장",
       "image": "rare_captains_spirit.webp",
       "synergies": [],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "TURN_END",
+          "action": "STEAL_RANDOM",
+          "amount": 1
+        }
+      ]
     },
     {
       "id": "rare_tough_sister",
@@ -424,7 +551,15 @@
       "description": "털털한 형 같은 누나. 나쁜 여자다.",
       "image": "rare_tough_sister.webp",
       "synergies": ["제육즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ACTIVATE",
+          "action": "STEAL_TARGET",
+          "label": "강탈",
+          "amount": 2
+        }
+      ]
     },
     {
       "id": "rare_red_card",
@@ -435,7 +570,15 @@
       "description": "축구를 좋아하는 뱁새. 독일에서 살다 왔다.",
       "image": "rare_red_card.webp",
       "synergies": ["대감님", "골실즈"],
-      "active": true
+      "active": true,
+      "effects": [
+        {
+          "trigger": "ACTIVATE",
+          "action": "RED_CARD",
+          "label": "레드카드",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "rare_miser",
@@ -494,7 +637,14 @@
       "description": "선택해라. 만약에...",
       "image": "legendary_abyss.webp",
       "synergies": ["후열의밤", "도파민즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "SEAL_ROBBERY",
+          "amount": 3
+        }
+      ]
     },
     {
       "id": "legendary_dubidu",
@@ -505,7 +655,14 @@
       "description": "그가 금지한 모든 음식이 들어갔다.",
       "image": "legendary_dubidu.webp",
       "synergies": ["후열의밤"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "SEAL_ROBBERY",
+          "amount": 3
+        }
+      ]
     },
     {
       "id": "legendary_strange_food",
@@ -516,7 +673,14 @@
       "description": "집들이에 초대됐다",
       "image": "legendary_strange_food.webp",
       "synergies": ["제육즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "SEAL_ROBBERY",
+          "amount": 3
+        }
+      ]
     },
     {
       "id": "legendary_ice_cream_smuggler",
@@ -581,7 +745,15 @@
       "description": "재앙이 찾아온단 말이 있는 마녀. 골반이 부러졌다.",
       "image": "legendary_witch.webp",
       "synergies": ["후열의밤", "탱커", "통모"],
-      "active": true
+      "active": true,
+      "effects": [
+        {
+          "trigger": "ACTIVATE",
+          "action": "END_ROUND",
+          "label": "라운드 종료",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "legendary_rainy_season",
@@ -592,7 +764,15 @@
       "description": "촉각슈트롤 입은 그들은 쉽게 움직이지 못한다.",
       "image": "legendary_rainy_season.webp",
       "synergies": ["후열의밤"],
-      "active": true
+      "active": true,
+      "effects": [
+        {
+          "trigger": "ACTIVATE",
+          "action": "RAIN",
+          "label": "장마",
+          "amount": 3
+        }
+      ]
     },
     {
       "id": "legendary_werewolf",
@@ -603,7 +783,16 @@
       "description": "외로운 늑대.",
       "image": "legendary_werewolf.webp",
       "synergies": ["후열의밤", "로열", "통모"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ACTIVATE",
+          "action": "ASSASSINATE",
+          "label": "암살",
+          "minTurn": 4,
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "legendary_vampire",
@@ -614,7 +803,14 @@
       "description": "뱀파이어. 외관은 여자지만 남자다. 속는 사람이 존재한다",
       "image": "legendary_vampire.webp",
       "synergies": ["도파민즈"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "ROBBED",
+          "action": "STEAL_FROM_ROBBER",
+          "amount": 3
+        }
+      ]
     },
     {
       "id": "legendary_vampire_hunter",

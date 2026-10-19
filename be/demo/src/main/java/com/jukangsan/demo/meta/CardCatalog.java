@@ -74,9 +74,17 @@ public final class CardCatalog {
 		}
 		this.effectsByCardId = Map.copyOf(effects);
 		this.cards = data.cards().stream()
-				.map(card -> new CardDefinition(card.id(), card.name(), card.tier(), card.price(),
-						card.effect(), blankToNull(card.description()), blankToNull(card.image()), card.active(),
-						card.synergies() == null ? List.of() : List.copyOf(card.synergies())))
+				.map(card -> {
+					CardEffect activation = effects.get(card.id()).stream()
+							.filter(effect -> effect.trigger() == EffectTrigger.ACTIVATE)
+							.findFirst()
+							.orElse(null);
+					return new CardDefinition(card.id(), card.name(), card.tier(), card.price(),
+							card.effect(), blankToNull(card.description()), blankToNull(card.image()), card.active(),
+							card.synergies() == null ? List.of() : List.copyOf(card.synergies()),
+							activation == null ? null : activation.label(),
+							activation != null && activation.action().targeted());
+				})
 				.toList();
 	}
 
@@ -96,8 +104,12 @@ public final class CardCatalog {
 		if (effect.trigger() == null || effect.action() == null || effect.amount() < 0) {
 			throw new IllegalStateException("카드 '" + cardId + "'의 효과 정의가 올바르지 않습니다.");
 		}
-		if (effect.trigger() == EffectTrigger.PLAYER_CAUGHT
-				&& (effect.caughtRoles() == null || effect.caughtRoles().isEmpty())) {
+		if (effect.trigger() == EffectTrigger.ACTIVATE && (effect.label() == null || effect.label().isBlank())) {
+			throw new IllegalStateException("카드 '" + cardId + "'의 사용 효과에 버튼 이름(label)이 없습니다.");
+		}
+		boolean needsRoles = effect.trigger() == EffectTrigger.PLAYER_CAUGHT
+				|| effect.trigger() == EffectTrigger.SELF_CAUGHT;
+		if (needsRoles && (effect.caughtRoles() == null || effect.caughtRoles().isEmpty())) {
 			throw new IllegalStateException("카드 '" + cardId + "'의 검거 효과에 caughtRoles가 없습니다.");
 		}
 	}
@@ -109,7 +121,17 @@ public final class CardCatalog {
 		// 라운드 종료 정산
 		ROUND_END,
 		// 플레이어 검거 (투표, 도적 탈주)
-		PLAYER_CAUGHT
+		PLAYER_CAUGHT,
+		// 보유자가 투표로 검거될 때
+		SELF_CAUGHT,
+		// 보유자가 도적에게 강탈당할 때
+		ROBBED,
+		// 보유자가 살인마에게 살해당할 때
+		KILLED,
+		// 보유자가 도적으로서 강탈할 때
+		ROBBING,
+		// 보유자가 직접 사용 (토론 단계에서만, 라운드당 1회)
+		ACTIVATE
 	}
 
 	// 효과
@@ -117,16 +139,63 @@ public final class CardCatalog {
 		// amount G 획득
 		GAIN_GOLD,
 		// 라운드 종료 보상을 amount G로 바꿈
-		SET_ROUND_REWARD
+		SET_ROUND_REWARD,
+		// 라운드 종료 시, 카드를 가진 뒤 강탈당한 적이 없으면 amount G 획득
+		GAIN_GOLD_IF_NOT_ROBBED,
+		// 당하는 일(강탈/살해)을 무효로 함
+		NULLIFY,
+		// 도적의 강탈을 amount 턴간 봉인
+		SEAL_ROBBERY,
+		// 강탈한 도적의 골드 amount G를 빼앗음
+		STEAL_FROM_ROBBER,
+		// 강탈 인원 amount명 추가
+		EXTRA_ROBBERY_TARGET,
+		// 무작위 생존자 1명에게서 amount G를 빼앗음
+		STEAL_RANDOM,
+		// 살인마로 검거돼도 죽지 않고 시민으로 복귀
+		SURVIVE_AS_CITIZEN,
+		// (사용) 즉시 라운드 종료 (마녀)
+		END_ROUND,
+		// (사용) amount 턴간 강탈과 살인마 행동 불가 (장마)
+		RAIN,
+		// (사용) 턴 강제 종료 후 대상 즉시 검거. 대상이 시민이면 사용자도 퇴장 (레드카드)
+		RED_CARD(true),
+		// (사용) 남은 턴의 턴 골드를 한 번에 받고, 이후 턴 골드는 받지 않음 (미래인)
+		PULL_TURN_GOLD,
+		// (사용) 대상에게서 amount G 강탈 (쎈 누나)
+		STEAL_TARGET(true),
+		// (사용) 대상 즉시 살해. minTurn 턴부터 가능 (늑대인간)
+		ASSASSINATE(true);
+
+		private final boolean targeted;
+
+		EffectAction() {
+			this(false);
+		}
+
+		EffectAction(boolean targeted) {
+			this.targeted = targeted;
+		}
+
+		// 사용할 때 대상 플레이어를 골라야 하는지
+		public boolean targeted() {
+			return targeted;
+		}
 	}
 
 	// 발동 시점 / 조건 / 효과. 조건은 필요한 것만 채운다.
 	//   caughtRoles: PLAYER_CAUGHT에서 검거된 사람의 직업이 이 중 하나일 때
 	//   maxTurn: 이 턴 이내일 때
+	//   maxUses: 카드를 가진 동안 이 횟수까지만 발동
+	//   minTurn: 이 턴부터 가능
+	//   label: 사용(ACTIVATE) 버튼 이름
 	public record CardEffect(
 			EffectTrigger trigger,
 			List<String> caughtRoles,
 			Integer maxTurn,
+			Integer minTurn,
+			Integer maxUses,
+			String label,
 			EffectAction action,
 			int amount
 	) {
@@ -143,7 +212,11 @@ public final class CardCatalog {
 			// 카드 일러스트 파일명. 프론트 assets/cards/ 안의 파일을 가리킨다.
 			String image,
 			boolean active,
-			List<String> synergyTags
+			List<String> synergyTags,
+			// 카드 UI 하단 사용 버튼 이름. 사용할 수 없는 카드면 null
+			String actionLabel,
+			// 사용할 때 대상을 골라야 하는지
+			boolean actionTargeted
 	) {
 	}
 

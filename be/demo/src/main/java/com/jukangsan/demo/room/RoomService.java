@@ -285,7 +285,7 @@ public class RoomService {
 					RoomDtos.RoomEvent.of("snapshot",
 							new RoomDtos.PrivateSnapshot(toRoomView(room), player.nickname, player.role,
 									"WAITING".equals(room.phase) ? null : walletOf(player),
-									myVoteOf(room, player), new RoomDtos.MyCardView(player.cardId),
+									myVoteOf(room, player), new RoomDtos.MyCardView(player.cardId, player.cardActivated),
 									myKillTargetOf(room, player))));
 		}
 	}
@@ -472,6 +472,9 @@ public class RoomService {
 			if (!murderer.alive) {
 				throw new RoomException(HttpStatus.CONFLICT, "DEAD_PLAYER", "사망한 플레이어는 행동할 수 없습니다.");
 			}
+			if (room.rainTurns > 0 && targetNickname != null) {
+				throw new RoomException(HttpStatus.CONFLICT, "RAINY", "장마 때문에 오늘 밤은 움직일 수 없습니다.");
+			}
 			if (targetNickname == null) {
 				murderer.killTarget = null;
 			} else {
@@ -537,6 +540,115 @@ public class RoomService {
 			player.cardRevealed = true;
 			broadcastRoom(room);
 		}
+	}
+
+	// 인물 카드 사용 (마녀, 장마, 레드카드, 미래인, 쎈 누나, 늑대인간)
+	// 토론 단계에서만, 라운드당 1회. 액티브 카드는 사용하면 공개된다.
+	public void activateCard(PlayerSession session, String roomName, String targetNickname) {
+		GameRoom room = getMemberRoom(session, roomName);
+		synchronized (room) {
+			if (!"DISCUSSION".equals(room.phase)) {
+				throw new RoomException(HttpStatus.CONFLICT, "NOT_DISCUSSION", "토론 시간에만 카드를 사용할 수 있습니다.");
+			}
+			GameRoom.Player player = requirePlayer(session, room.name);
+			if (!player.alive) {
+				throw new RoomException(HttpStatus.CONFLICT, "DEAD_PLAYER", "사망한 플레이어는 카드를 사용할 수 없습니다.");
+			}
+			CardCatalog.CardEffect effect = cardCatalog.effectsOf(player.cardId).stream()
+					.filter(candidate -> candidate.trigger() == CardCatalog.EffectTrigger.ACTIVATE)
+					.findFirst()
+					.orElseThrow(() -> new RoomException(HttpStatus.CONFLICT, "NOT_USABLE_CARD",
+							"사용할 수 있는 인물 카드가 없습니다."));
+			if (player.cardActivated) {
+				throw new RoomException(HttpStatus.CONFLICT, "CARD_ALREADY_USED", "이번 라운드에 이미 사용한 카드입니다.");
+			}
+			if (effect.minTurn() != null && room.turn < effect.minTurn()) {
+				throw new RoomException(HttpStatus.CONFLICT, "TOO_EARLY",
+						effect.minTurn() + "턴부터 사용할 수 있습니다.");
+			}
+			GameRoom.Player target = null;
+			if (effect.action().targeted()) {
+				target = room.players.values().stream()
+						.filter(candidate -> candidate.nickname.equals(targetNickname))
+						.findFirst()
+						.orElse(null);
+				if (target == null || target == player || !target.alive) {
+					throw new RoomException(HttpStatus.BAD_REQUEST, "INVALID_CARD_TARGET",
+							"자신과 사망자를 뺀 생존자를 골라야 합니다.");
+				}
+			}
+			player.cardActivated = true;
+			boolean activeCard = cardCatalog.cards().stream()
+					.anyMatch(card -> card.id().equals(player.cardId) && card.active());
+			if (activeCard) {
+				player.cardRevealed = true;
+			}
+			sendMyCard(player);
+			applyActivation(room, player, effect, target);
+		}
+	}
+
+	private void applyActivation(GameRoom room, GameRoom.Player player, CardCatalog.CardEffect effect,
+			GameRoom.Player target) {
+		switch (effect.action()) {
+			case END_ROUND -> {
+				// 마녀: 즉시 라운드 종료. 도적은 잡히지 않았으므로 미검거로 정산한다.
+				clearVotes(room);
+				room.trialPlayerIds.clear();
+				room.lastVoteResult = new RoomDtos.VoteResultView("WITCH", List.of(player.nickname));
+				enterPhase(room, "RESULT", voteResultSeconds, () -> endRound(room, false));
+			}
+			case RAIN -> {
+				room.rainTurns = Math.max(room.rainTurns, effect.amount());
+				announce(room, player.nickname + "님이 장마를 불렀습니다. " + effect.amount()
+						+ "턴간 강탈과 살인마 행동이 막힙니다.");
+				broadcastRoom(room);
+			}
+			case RED_CARD -> {
+				// 턴을 끝내고 대상을 검거한다. 대상이 시민이면 사용자도 함께 퇴장한다.
+				announce(room, player.nickname + "님이 " + target.nickname + "님에게 레드카드를 꺼냈습니다!");
+				clearVotes(room);
+				showVoteResult(room, target.role == Role.CITIZEN
+						? List.of(target.id, player.id)
+						: List.of(target.id));
+			}
+			case PULL_TURN_GOLD -> {
+				// 미래인: 이번 턴을 포함한 남은 턴의 턴 골드를 한 번에 받는다.
+				int gain = (maxTurns - room.turn + 1) * turnGold;
+				player.gold += gain;
+				player.turnGoldPulled = true;
+				sendWallet(player);
+				sendNotice(player, "남은 턴의 골드 " + gain + "G를 당겨 받았습니다.");
+				broadcastRoom(room);
+			}
+			case STEAL_TARGET -> {
+				int taken = Math.min(effect.amount(), target.gold);
+				target.gold -= taken;
+				player.gold += taken;
+				sendWallet(target);
+				sendWallet(player);
+				sendNotice(target, "누군가에게 " + taken + "G를 빼앗겼습니다.");
+				sendNotice(player, target.nickname + "님에게서 " + taken + "G를 빼앗았습니다.");
+			}
+			case ASSASSINATE -> {
+				target.alive = false;
+				target.vote = null;
+				announce(room, target.nickname + "님이 암살당했습니다.");
+				if (target.role == Role.THIEF) {
+					thiefKilled(room, target, "THIEF_ASSASSINATED");
+				} else if (citizenSafetyTriggered(room)) {
+					endRound(room, false);
+				} else {
+					onVotesChanged(room);
+				}
+			}
+			default -> throw new IllegalStateException("사용 효과가 아닌 동작입니다: " + effect.action());
+		}
+	}
+
+	private void announce(GameRoom room, String message) {
+		messagingTemplate.getObject().convertAndSend(topic(room.name),
+				RoomDtos.RoomEvent.of("announcement", new RoomDtos.AnnouncementView(message)));
 	}
 
 	// 지금 효력이 있는 카드 효과. 사망자는 보유 카드 효과가 끊긴다.
@@ -605,6 +717,9 @@ public class RoomService {
 			// 새로 뽑은 카드는 비공개. 공개했던 카드를 바꾸면 모두의 화면에서 내려간다.
 			boolean wasRevealed = player.cardRevealed;
 			player.cardRevealed = false;
+			player.robbedWithCard = 0;
+			player.cardUses = 0;
+			player.cardActivated = false;
 			// TODO: 라운드별 카드 구매 내역 로깅
 			sendWallet(player);
 			sendMyCard(player);
@@ -627,7 +742,7 @@ public class RoomService {
 
 	private void sendMyCard(GameRoom.Player player) {
 		messagingTemplate.getObject().convertAndSendToUser(player.id, "/queue/private",
-				RoomDtos.RoomEvent.of("myCard", new RoomDtos.MyCardView(player.cardId)));
+				RoomDtos.RoomEvent.of("myCard", new RoomDtos.MyCardView(player.cardId, player.cardActivated)));
 	}
 
 	WalletView walletOf(PlayerSession session) {
@@ -653,12 +768,18 @@ public class RoomService {
 		room.turn = 0;
 		room.lastVoteResult = null;
 		room.nightVictim = null;
+		room.robberySealedTurns = 0;
+		room.rainTurns = 0;
 		room.trialPlayerIds.clear();
 		// 사망자는 다음 라운드에 부활하고, 인물 카드는 그 라운드에만 유효하다.
 		for (GameRoom.Player player : room.players.values()) {
 			player.alive = true;
+			player.turnGoldPulled = false;
 			player.cardId = null;
 			player.cardRevealed = false;
+			player.robbedWithCard = 0;
+			player.cardUses = 0;
+			player.cardActivated = false;
 			player.killTarget = null;
 			sendMyCard(player);
 		}
@@ -742,24 +863,29 @@ public class RoomService {
 		boolean thiefCaught = false;
 		boolean murdererCaught = false;
 		List<String> nicknames = new ArrayList<>();
+		// 검거 당시 직업. 변호사/면죄부로 살인마가 시민으로 바뀌어도 보상은 살인마 검거 기준이다.
+		Map<String, Role> caughtRoles = new java.util.LinkedHashMap<>();
 		for (String id : caughtIds) {
 			GameRoom.Player caught = room.players.get(id);
 			if (caught == null) {
 				continue;
 			}
-			caught.alive = false;
-			caught.vote = null;
+			caughtRoles.put(id, caught.role);
 			nicknames.add(caught.nickname);
 			thiefCaught |= caught.role == Role.THIEF;
 			murdererCaught |= caught.role == Role.MURDERER;
-		}
-		applyCatchRewards(room, caughtIds, thiefCaught);
-		for (String id : caughtIds) {
-			GameRoom.Player caught = room.players.get(id);
-			if (caught != null) {
-				applyCatchCardEffects(room, caught.role);
+			caught.vote = null;
+			if (hasSurviveEffect(caught)) {
+				caught.role = Role.CITIZEN;
+				messagingTemplate.getObject().convertAndSendToUser(caught.id, "/queue/private",
+						RoomDtos.RoomEvent.of("role", new RoomDtos.RoleView(caught.role)));
+				sendNotice(caught, "인물 카드 효과로 살아남아 시민으로 복귀했습니다.");
+			} else {
+				caught.alive = false;
 			}
 		}
+		applyCatchRewards(room, caughtRoles, thiefCaught);
+		caughtRoles.values().forEach(role -> applyCatchCardEffects(room, role));
 		room.players.values().forEach(this::sendWallet);
 		String kind = caughtIds.isEmpty() ? "NO_ONE"
 				: thiefCaught ? "THIEF_CAUGHT"
@@ -778,7 +904,13 @@ public class RoomService {
 	}
 
 	// CLAUDE.md 검거/사망 결과 표
-	private void applyCatchRewards(GameRoom room, List<String> caughtIds, boolean thiefCaught) {
+	private boolean hasSurviveEffect(GameRoom.Player caught) {
+		return effectsOf(caught, CardCatalog.EffectTrigger.SELF_CAUGHT).stream()
+				.anyMatch(effect -> effect.action() == CardCatalog.EffectAction.SURVIVE_AS_CITIZEN
+						&& effect.caughtRoles().contains(caught.role.name()));
+	}
+
+	private void applyCatchRewards(GameRoom room, Map<String, Role> caughtRoles, boolean thiefCaught) {
 		if (thiefCaught) {
 			// 도적 검거: 생존 시민(살인마 포함) +1G. 도적은 골드를 잃지 않는다.
 			for (GameRoom.Player player : alivePlayers(room)) {
@@ -787,12 +919,12 @@ public class RoomService {
 				}
 			}
 		} else {
-			for (String id : caughtIds) {
-				GameRoom.Player caught = room.players.get(id);
+			for (Map.Entry<String, Role> entry : caughtRoles.entrySet()) {
+				GameRoom.Player caught = room.players.get(entry.getKey());
 				if (caught == null) {
 					continue;
 				}
-				if (caught.role == Role.MURDERER) {
+				if (entry.getValue() == Role.MURDERER) {
 					// 살인마 검거: 살인마 제외 생존자 전원 +1G (도적 포함, 사망자 제외)
 					for (GameRoom.Player player : room.players.values()) {
 						if (player != caught && player.alive) {
@@ -817,7 +949,10 @@ public class RoomService {
 		}
 		// 턴 정산 순서: 생존자 전원 1G → 도적 강탈 → 살인마 밤 행동
 		for (GameRoom.Player player : alivePlayers(room)) {
-			player.gold += turnGold;
+			// 미래인으로 당겨 받았으면 턴 골드는 없다.
+			if (!player.turnGoldPulled) {
+				player.gold += turnGold;
+			}
 			for (CardCatalog.CardEffect effect : effectsOf(player, CardCatalog.EffectTrigger.TURN_END)) {
 				if (effect.action() == CardCatalog.EffectAction.GAIN_GOLD) {
 					player.gold += effect.amount();
@@ -826,6 +961,7 @@ public class RoomService {
 			sendWallet(player);
 		}
 		robRandomPlayers(room);
+		stealRandomByCards(room);
 		room.nightVictim = null;
 		for (GameRoom.Player player : room.players.values()) {
 			if (player.killTarget != null) {
@@ -837,6 +973,7 @@ public class RoomService {
 	}
 
 	// 도적 강탈: 사망자와 도적 자신을 뺀 생존자 중 랜덤으로 골라 빼앗는다. 골드가 없으면 빼앗지 못한다.
+	// 피해자 카드: 강철헬멧/해룡 무효, 흡혈 역강탈, 심연·두비두·괴식 봉인. 도적 카드: (자칭)닌자 추가 강탈.
 	private void robRandomPlayers(GameRoom room) {
 		GameRoom.Player thief = alivePlayers(room).stream()
 				.filter(player -> player.role == Role.THIEF)
@@ -845,32 +982,124 @@ public class RoomService {
 		if (thief == null) {
 			return;
 		}
+		if (room.rainTurns > 0) {
+			sendNotice(thief, "장마 때문에 이번 턴에는 강탈하지 못했습니다.");
+			return;
+		}
+		if (room.robberySealedTurns > 0) {
+			room.robberySealedTurns--;
+			sendNotice(thief, "강탈이 봉인되어 이번 턴에는 강탈하지 못했습니다.");
+			return;
+		}
 		List<GameRoom.Player> candidates = new ArrayList<>(alivePlayers(room));
 		candidates.remove(thief);
 		Collections.shuffle(candidates, secureRandom);
 		int targetCount = room.players.size() >= robberyLargeRoomPlayers ? robberyTargetsLarge : robberyTargetsSmall;
+		targetCount += sumAmount(thief, CardCatalog.EffectTrigger.ROBBING, CardCatalog.EffectAction.EXTRA_ROBBERY_TARGET);
 		List<String> robbed = new ArrayList<>();
+		List<String> blocked = new ArrayList<>();
+		int sealTurns = 0;
 		for (GameRoom.Player victim : candidates.subList(0, Math.min(targetCount, candidates.size()))) {
+			if (useEffect(victim, CardCatalog.EffectTrigger.ROBBED, CardCatalog.EffectAction.NULLIFY)) {
+				blocked.add(victim.nickname);
+				sendNotice(victim, "인물 카드가 도적의 강탈을 막았습니다.");
+				continue;
+			}
 			int amount = Math.min(robberyAmount, victim.gold);
 			if (amount <= 0) {
 				continue;
 			}
 			victim.gold -= amount;
 			thief.gold += amount;
+			victim.robbedWithCard++;
 			robbed.add(victim.nickname);
-			sendWallet(victim);
 			sendNotice(victim, "도적에게 " + amount + "G를 강탈당했습니다.");
+			int drain = Math.min(thief.gold,
+					sumAmount(victim, CardCatalog.EffectTrigger.ROBBED, CardCatalog.EffectAction.STEAL_FROM_ROBBER));
+			if (drain > 0) {
+				thief.gold -= drain;
+				victim.gold += drain;
+				sendNotice(victim, "인물 카드 효과로 도적의 골드 " + drain + "G를 빼앗았습니다.");
+				sendNotice(thief, victim.nickname + "님에게 골드 " + drain + "G를 도로 빼앗겼습니다.");
+			}
+			for (CardCatalog.CardEffect effect : effectsOf(victim, CardCatalog.EffectTrigger.ROBBED)) {
+				if (effect.action() == CardCatalog.EffectAction.SEAL_ROBBERY) {
+					sealTurns = Math.max(sealTurns, effect.amount());
+				}
+			}
+			sendWallet(victim);
 		}
 		if (!robbed.isEmpty()) {
-			sendWallet(thief);
 			sendNotice(thief, String.join(", ", robbed) + "님에게서 골드를 강탈했습니다.");
+		}
+		if (!blocked.isEmpty()) {
+			sendNotice(thief, String.join(", ", blocked) + "님에게는 강탈이 통하지 않았습니다.");
+		}
+		if (sealTurns > 0) {
+			room.robberySealedTurns = Math.max(room.robberySealedTurns, sealTurns);
+			sendNotice(thief, "강탈이 " + sealTurns + "턴간 봉인되었습니다.");
+		}
+		sendWallet(thief);
+	}
+
+	// 대장의 기백: 매 턴 무작위 생존자 1명에게서 빼앗는다. 도적의 강탈이 아니므로 강탈 방어 카드는 통하지 않는다.
+	private void stealRandomByCards(GameRoom room) {
+		for (GameRoom.Player player : alivePlayers(room)) {
+			int amount = sumAmount(player, CardCatalog.EffectTrigger.TURN_END, CardCatalog.EffectAction.STEAL_RANDOM);
+			if (amount <= 0) {
+				continue;
+			}
+			List<GameRoom.Player> others = new ArrayList<>(alivePlayers(room));
+			others.remove(player);
+			if (others.isEmpty()) {
+				continue;
+			}
+			GameRoom.Player target = others.get(secureRandom.nextInt(others.size()));
+			int taken = Math.min(amount, target.gold);
+			if (taken <= 0) {
+				continue;
+			}
+			target.gold -= taken;
+			player.gold += taken;
+			sendWallet(target);
+			sendWallet(player);
+			sendNotice(target, "누군가에게 " + taken + "G를 빼앗겼습니다.");
+			sendNotice(player, target.nickname + "님에게서 " + taken + "G를 빼앗았습니다.");
 		}
 	}
 
+	private int sumAmount(GameRoom.Player player, CardCatalog.EffectTrigger trigger, CardCatalog.EffectAction action) {
+		return effectsOf(player, trigger).stream()
+				.filter(effect -> effect.action() == action)
+				.mapToInt(CardCatalog.CardEffect::amount)
+				.sum();
+	}
+
+	// 해당 효과가 있으면 발동한다. 횟수 제한(maxUses)이 있으면 남은 횟수가 있을 때만 발동하고 1회 쓴다.
+	private boolean useEffect(GameRoom.Player player, CardCatalog.EffectTrigger trigger,
+			CardCatalog.EffectAction action) {
+		for (CardCatalog.CardEffect effect : effectsOf(player, trigger)) {
+			if (effect.action() != action) {
+				continue;
+			}
+			if (effect.maxUses() == null) {
+				return true;
+			}
+			if (player.cardUses < effect.maxUses()) {
+				player.cardUses++;
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private void afterNight(GameRoom room) {
-		GameRoom.Player victim = carryOutKill(room);
+		GameRoom.Player victim = room.rainTurns > 0 ? null : carryOutKill(room);
+		if (room.rainTurns > 0) {
+			room.rainTurns--;
+		}
 		if (victim != null && victim.role == Role.THIEF) {
-			thiefKilled(room, victim);
+			thiefKilled(room, victim, "THIEF_KILLED");
 			return;
 		}
 		if (victim != null) {
@@ -904,6 +1133,10 @@ public class RoomService {
 			}
 			murderer.gold -= killCost;
 			sendWallet(murderer);
+			if (useEffect(target, CardCatalog.EffectTrigger.KILLED, CardCatalog.EffectAction.NULLIFY)) {
+				sendNotice(murderer, "살해에 실패했습니다.");
+				return null;
+			}
 			target.alive = false;
 			target.vote = null;
 			return target;
@@ -911,15 +1144,17 @@ public class RoomService {
 		return null;
 	}
 
-	// 살인마가 도적을 처치: 생존자 전원(도적·사망자 제외) +1G, 특별 알림 후 라운드 종료(도적 코인 없음)
-	private void thiefKilled(GameRoom room, GameRoom.Player thief) {
+	// 살인마(또는 늑대인간)가 도적을 처치: 생존자 전원(도적·사망자 제외) +1G, 특별 알림 후 라운드 종료(도적 코인 없음)
+	private void thiefKilled(GameRoom room, GameRoom.Player thief, String kind) {
 		for (GameRoom.Player player : alivePlayers(room)) {
 			if (player != thief) {
 				player.gold += 1;
 				sendWallet(player);
 			}
 		}
-		room.lastVoteResult = new RoomDtos.VoteResultView("THIEF_KILLED", List.of(thief.nickname));
+		clearVotes(room);
+		room.trialPlayerIds.clear();
+		room.lastVoteResult = new RoomDtos.VoteResultView(kind, List.of(thief.nickname));
 		enterPhase(room, "RESULT", voteResultSeconds, () -> endRound(room, true));
 	}
 
@@ -945,6 +1180,11 @@ public class RoomService {
 				}
 			}
 			player.gold += reward;
+			// 해룡: 카드를 가진 뒤 강탈당한 적이 없으면 보너스
+			if (player.robbedWithCard == 0) {
+				player.gold += sumAmount(player, CardCatalog.EffectTrigger.ROUND_END,
+						CardCatalog.EffectAction.GAIN_GOLD_IF_NOT_ROBBED);
+			}
 			if (!thiefCaught && player.role == Role.THIEF) {
 				player.coins += 1;
 			}
@@ -989,6 +1229,8 @@ public class RoomService {
 		room.turn = 0;
 		room.backgroundIndex = null;
 		room.lastVoteResult = null;
+		room.rainTurns = 0;
+		room.robberySealedTurns = 0;
 		room.nightVictim = null;
 		room.trialPlayerIds.clear();
 		for (GameRoom.Player player : room.players.values()) {
@@ -999,6 +1241,9 @@ public class RoomService {
 			player.vote = null;
 			player.cardId = null;
 			player.cardRevealed = false;
+			player.robbedWithCard = 0;
+			player.cardUses = 0;
+			player.cardActivated = false;
 			sendMyCard(player);
 		}
 		cancelPhaseTask(room);
@@ -1335,7 +1580,7 @@ public class RoomService {
 		return new RoomView(room.name, room.phase, List.copyOf(players), room.config, room.backgroundIndex,
 				room.round, room.turn, room.phaseEndsAt, minPlayers, maxTurns,
 				"RESULT".equals(room.phase) ? room.lastVoteResult : null,
-				roundSummaryView(room), room.nightVictim);
+				roundSummaryView(room), room.nightVictim, room.rainTurns);
 	}
 
 	private RoomDtos.RoundSummaryView roundSummaryView(GameRoom room) {

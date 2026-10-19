@@ -76,6 +76,12 @@ public class RoomWebSocketController {
 		roomService.chooseKillTarget(session(principal), roomName, request.target());
 	}
 
+	@MessageMapping("/rooms/{roomName}/activate")
+	public void activate(@DestinationVariable String roomName, RoomDtos.ActivateCardRequest request,
+			Principal principal) {
+		roomService.activateCard(session(principal), roomName, request.target());
+	}
+
 	@MessageMapping("/rooms/{roomName}/reveal")
 	public void reveal(@DestinationVariable String roomName, Principal principal) {
 		roomService.revealCard(session(principal), roomName);
