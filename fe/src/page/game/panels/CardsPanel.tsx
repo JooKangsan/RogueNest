@@ -88,11 +88,17 @@ function MiniCard({
 export default function CardsPanel({
   role,
   card,
+  revealed,
+  onReveal,
   freeReroll = null,
 }: {
   role: Role | null;
   // 보유한 인물 카드. 없으면 null
   card: CardDefinition | null;
+  // 내 카드를 이미 공개했는지
+  revealed: boolean;
+  // 공개할 수 있을 때만 넘긴다.
+  onReveal?: () => void;
   // 무료로 다시 뽑을 수 있을 때만 넘긴다. 없으면 다시 뽑기 버튼은 비활성.
   // TODO: 인물 카드 구현 때 아래 두 경우에 연결한다.
   //  - 다알아 박사님 보유 (일반 → 희귀, 희귀 → 전설 1회)
@@ -105,6 +111,8 @@ export default function CardsPanel({
   } | null>(null);
   const closeCard = useCallback(() => setOpenCard(null), []);
 
+  // 공개는 되돌릴 수 없으므로 한 번 더 확인한다. 카드가 바뀌면 확인 상태를 버린다.
+  const [confirmingReveal, setConfirmingReveal] = useState(false);
   const jobCard = roleCard(role);
   const heldCard = card ? characterCard(card) : EMPTY_CHARACTER_CARD;
 
@@ -112,6 +120,7 @@ export default function CardsPanel({
   const [shownCardId, setShownCardId] = useState(card?.id ?? null);
   if ((card?.id ?? null) !== shownCardId) {
     setShownCardId(card?.id ?? null);
+    setConfirmingReveal(false);
     if (card) setOpenCard({ card: characterCard(card), origin: null });
   }
 
@@ -142,14 +151,39 @@ export default function CardsPanel({
           card={heldCard}
           onOpen={(origin) => setOpenCard({ card: heldCard, origin })}
         >
-          {/* TODO: 인물 카드 공개는 인물 카드 구현 때 연결한다. */}
-          <button
-            type="button"
-            disabled
-            className="min-h-11 w-full rounded-md bg-green-700 text-sm font-semibold text-white disabled:opacity-40"
-          >
-            카드 공개
-          </button>
+          {confirmingReveal && onReveal && !revealed ? (
+            <div className="flex w-full flex-col gap-1">
+              <p className="text-center text-xs">공개하면 되돌릴 수 없어요</p>
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  type="button"
+                  className="min-h-11 rounded-md bg-green-700 text-sm font-semibold text-white"
+                  onClick={() => {
+                    setConfirmingReveal(false);
+                    onReveal();
+                  }}
+                >
+                  공개
+                </button>
+                <button
+                  type="button"
+                  className="min-h-11 rounded-md border-2 border-amber-900/40 text-sm font-semibold"
+                  onClick={() => setConfirmingReveal(false)}
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={!onReveal || revealed}
+              className="min-h-11 w-full rounded-md bg-green-700 text-sm font-semibold text-white disabled:opacity-40"
+              onClick={() => setConfirmingReveal(true)}
+            >
+              {revealed ? "공개됨" : "카드 공개"}
+            </button>
+          )}
         </MiniCard>
       </div>
 

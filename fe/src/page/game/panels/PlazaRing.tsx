@@ -56,6 +56,7 @@ export default function PlazaRing({
   onVote,
   canTarget = (player) => player.alive,
   actionLabel = "에게 투표",
+  cardLabel = () => undefined,
 }: {
   players: Player[];
   myNickname: string | undefined;
@@ -68,6 +69,8 @@ export default function PlazaRing({
   canTarget?: (player: Player) => boolean;
   // 캐릭터를 눌렀을 때 하는 행동 (스크린리더용). 밤에는 살인마의 살해 대상 지정
   actionLabel?: string;
+  // 공개된 인물 카드 id → 화면에 보일 이름
+  cardLabel?: (cardId: string) => string | undefined;
 }) {
   // 색과 자리 모두 입장 순서로 정한다. 첫 번째 플레이어가 12시, 이후 시계 방향.
   const angles = seatAngles(players.length);
@@ -167,6 +170,15 @@ export default function PlazaRing({
             >
               {player.nickname}
             </span>
+            {/* 공개한 인물 카드 */}
+            {player.revealedCardId && (
+              <span
+                title="공개된 인물 카드"
+                className="absolute left-1/2 top-full mt-5 max-w-[200%] -translate-x-1/2 truncate whitespace-nowrap rounded-md border border-[#5a3a22] bg-[#f6ecda] px-1.5 text-[11px] font-bold text-[#3b2413] shadow motion-safe:animate-page-in"
+              >
+                🂠 {cardLabel(player.revealedCardId) ?? "인물 카드"}
+              </span>
+            )}
           </button>
         );
       })}

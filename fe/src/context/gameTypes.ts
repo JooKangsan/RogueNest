@@ -9,6 +9,8 @@ export type Player = {
   alive: boolean;
   // 최종 투표에서 광장 중앙에 섰는지
   onTrial: boolean;
+  // 공개한 인물 카드 id. 비공개면 null
+  revealedCardId: string | null;
 };
 
 // 투표 결과 (RESULT 단계에서만 온다)

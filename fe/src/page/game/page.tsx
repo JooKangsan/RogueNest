@@ -380,6 +380,10 @@ export default function GamePage() {
       ? () => publish("vote", { target: null, abstain: true })
       : undefined;
     const voteTarget = myVote?.target ?? null;
+    const cardLabel = (cardId: string) => {
+      const card = catalog?.cards.find((item) => item.id === cardId);
+      return card ? `${card.name}(${card.tier})` : undefined;
+    };
     // 인물 카드는 라운드 중(역할 배정 후) 언제든, 생존자만 뽑을 수 있다. 서버도 같은 규칙으로 거부한다.
     const canDrawCard =
       isConnected &&
@@ -402,7 +406,16 @@ export default function GamePage() {
           finalVote={finalVote}
         />
       ),
-      cards: <CardsPanel role={role} card={myCard} />,
+      cards: (
+        <CardsPanel
+          role={role}
+          card={myCard}
+          revealed={Boolean(myPlayer?.revealedCardId)}
+          onReveal={
+            canDrawCard && myCard ? () => publish("reveal", {}) : undefined
+          }
+        />
+      ),
       shop: (
         <MyInfoPanel
           wallet={wallet}
@@ -430,6 +443,7 @@ export default function GamePage() {
               player.alive && player.nickname !== myPlayer?.nickname
             }
             actionLabel=" 살해 대상으로 지정"
+            cardLabel={cardLabel}
           />
         ) : (
           <PlazaRing
@@ -439,6 +453,7 @@ export default function GamePage() {
             voteTarget={voteTarget}
             onVote={vote}
             canTarget={canTarget}
+            cardLabel={cardLabel}
           />
         ),
       chat: (className: string) => (
