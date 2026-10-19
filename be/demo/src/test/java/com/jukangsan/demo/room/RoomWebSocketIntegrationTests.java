@@ -88,7 +88,7 @@ class RoomWebSocketIntegrationTests {
 		});
 		session.subscribe("/topic/room/" + roomName, roomHandler);
 		session.subscribe("/user/queue/private", privateHandler);
-		Thread.sleep(250);
+		// 서버가 받은 순서대로 처리하므로 구독 직후 바로 요청해도 스냅샷을 받는다.
 		session.send("/app/rooms/" + roomName + "/snapshot", Map.of());
 
 		assertThat(privateSnapshotReceived.await(5, TimeUnit.SECONDS)).withFailMessage(

@@ -285,7 +285,7 @@ public class RoomService {
 					RoomDtos.RoomEvent.of("snapshot",
 							new RoomDtos.PrivateSnapshot(toRoomView(room), player.nickname, player.role,
 									"WAITING".equals(room.phase) ? null : walletOf(player),
-									myVoteOf(room, player), new RoomDtos.MyCardView(player.cardId, player.cardActivated),
+									myVoteOf(room, player), myCardOf(player),
 									myKillTargetOf(room, player))));
 		}
 	}
@@ -538,6 +538,7 @@ public class RoomService {
 				return;
 			}
 			player.cardRevealed = true;
+			refreshSynergies(room);
 			broadcastRoom(room);
 		}
 	}
@@ -582,6 +583,7 @@ public class RoomService {
 					.anyMatch(card -> card.id().equals(player.cardId) && card.active());
 			if (activeCard) {
 				player.cardRevealed = true;
+				refreshSynergies(room);
 			}
 			sendMyCard(player);
 			applyActivation(room, player, effect, target);
@@ -633,6 +635,7 @@ public class RoomService {
 			case ASSASSINATE -> {
 				target.alive = false;
 				target.vote = null;
+				refreshSynergies(room);
 				announce(room, target.nickname + "님이 암살당했습니다.");
 				if (target.role == Role.THIEF) {
 					thiefKilled(room, target, "THIEF_ASSASSINATED");
@@ -651,14 +654,143 @@ public class RoomService {
 				RoomDtos.RoomEvent.of("announcement", new RoomDtos.AnnouncementView(message)));
 	}
 
-	// 지금 효력이 있는 카드 효과. 사망자는 보유 카드 효과가 끊긴다.
+	// 지금 효력이 있는 카드 효과와 시너지 지속 효과. 사망자는 보유 카드 효과가 끊긴다.
 	private List<CardCatalog.CardEffect> effectsOf(GameRoom.Player player, CardCatalog.EffectTrigger trigger) {
 		if (!player.alive) {
 			return List.of();
 		}
-		return cardCatalog.effectsOf(player.cardId).stream()
+		return java.util.stream.Stream.concat(cardCatalog.effectsOf(player.cardId).stream(),
+						player.synergyEffects.stream())
 				.filter(effect -> effect.trigger() == trigger)
 				.toList();
+	}
+
+	// ---- 시너지 ----
+	// 살아 있고 카드를 공개한 플레이어 중 그 시너지에 속한 카드를 낸 사람이 참여자다.
+	// 인원(서로 다른 카드 종류 수, 후열의밤은 공개자 수)이 단계 인원 이상이면 발동하고,
+	// 높은 단계는 낮은 단계 효과를 교체한다. 서로 다른 시너지는 함께 받는다.
+
+	private List<GameRoom.Player> synergyParticipants(GameRoom room, CardCatalog.SynergyRule rule) {
+		return alivePlayers(room).stream()
+				.filter(player -> player.cardRevealed)
+				.filter(player -> {
+					CardCatalog.CardDefinition card = cardCatalog.card(player.cardId);
+					return card != null && card.synergyTags().contains(rule.name());
+				})
+				.toList();
+	}
+
+	private int synergyCount(CardCatalog.SynergyRule rule, List<GameRoom.Player> participants) {
+		if (rule.countBy() == CardCatalog.SynergyCountBy.PLAYERS) {
+			return participants.size();
+		}
+		return (int) participants.stream().map(player -> cardCatalog.card(player.cardId).name()).distinct().count();
+	}
+
+	// 지금 단계(0부터). 발동 전이면 -1
+	private int synergyLevel(CardCatalog.SynergyRule rule, int count) {
+		int level = -1;
+		for (int index = 0; index < rule.levels().size(); index++) {
+			if (count >= rule.levels().get(index).count()) {
+				level = index;
+			}
+		}
+		return level;
+	}
+
+	// 카드 공개·교체, 사망, 퇴장처럼 참여자가 바뀔 수 있는 일 뒤에 부른다.
+	// 지속 효과를 다시 계산하고, 새로 도달한 단계의 1회성 보상을 지급한다.
+	private void refreshSynergies(GameRoom room) {
+		room.players.values().forEach(player -> player.synergyEffects = new ArrayList<>());
+		java.util.Set<GameRoom.Player> rewarded = new java.util.LinkedHashSet<>();
+		for (CardCatalog.SynergyRule rule : cardCatalog.synergyRules()) {
+			List<GameRoom.Player> participants = synergyParticipants(room, rule);
+			int count = synergyCount(rule, participants);
+			int level = synergyLevel(rule, count);
+			if (level < 0) {
+				continue;
+			}
+			if (level > room.synergyPeaks.getOrDefault(rule.id(), -1)) {
+				room.synergyPeaks.put(rule.id(), level);
+				announce(room, "시너지 「" + rule.name() + "」 발동!");
+			}
+			CardCatalog.SynergyLevel current = rule.levels().get(level);
+			for (CardCatalog.CardEffect effect : current.effects()) {
+				if (effect.action() == CardCatalog.EffectAction.GOLD_PER_NEW_PARTICIPANT) {
+					// 후열의밤: 참여자가 1명 늘 때마다(첫 발동 포함) 그 시점의 참여자 전원에게 지급
+					int peak = room.synergyParticipantPeaks.getOrDefault(rule.id(), current.count() - 1);
+					if (participants.size() > peak) {
+						int times = participants.size() - peak;
+						for (GameRoom.Player participant : participants) {
+							participant.gold += effect.amount() * times;
+							rewarded.add(participant);
+						}
+						room.synergyParticipantPeaks.put(rule.id(), participants.size());
+					}
+					continue;
+				}
+				for (GameRoom.Player participant : participants) {
+					String cardName = cardCatalog.card(participant.cardId).name();
+					if ((effect.cardName() != null && !effect.cardName().equals(cardName))
+							|| cardName.equals(effect.notCardName())) {
+						continue;
+					}
+					if (effect.trigger() != CardCatalog.EffectTrigger.SYNERGY_ON) {
+						participant.synergyEffects.add(effect);
+					} else if (grantSynergyReward(participant, rule, effect)) {
+						rewarded.add(participant);
+					}
+				}
+			}
+		}
+		for (GameRoom.Player player : rewarded) {
+			sendWallet(player);
+			sendMyCard(player);
+		}
+	}
+
+	// 1회성 시너지 보상. 골드는 단계가 오르면 이전에 받은 만큼을 빼고 더 준다(효과 교체).
+	private boolean grantSynergyReward(GameRoom.Player player, CardCatalog.SynergyRule rule,
+			CardCatalog.CardEffect effect) {
+		switch (effect.action()) {
+			case GRANT_GOLD -> {
+				int granted = player.synergyGoldGranted.getOrDefault(rule.id(), 0);
+				if (effect.amount() <= granted) {
+					return false;
+				}
+				player.gold += effect.amount() - granted;
+				player.synergyGoldGranted.put(rule.id(), effect.amount());
+				return true;
+			}
+			case GRANT_COIN -> {
+				if (!player.synergyRewardsGranted.add(rule.id() + ":coin")) {
+					return false;
+				}
+				player.coins += effect.amount();
+				return true;
+			}
+			case FREE_REROLL -> {
+				// 통모: 무료 다시 뽑기. 새로 뽑은 카드는 비공개가 되어 공개가 되돌려진다.
+				if (!player.synergyRewardsGranted.add(rule.id() + ":reroll")) {
+					return false;
+				}
+				player.bonusRerollTier = effect.tier();
+				return true;
+			}
+			default -> throw new IllegalStateException("1회성 시너지 보상이 아닌 동작입니다: " + effect.action());
+		}
+	}
+
+	private List<RoomDtos.ActiveSynergyView> activeSynergies(GameRoom room) {
+		List<RoomDtos.ActiveSynergyView> active = new ArrayList<>();
+		for (CardCatalog.SynergyRule rule : cardCatalog.synergyRules()) {
+			List<GameRoom.Player> participants = synergyParticipants(room, rule);
+			if (synergyLevel(rule, synergyCount(rule, participants)) >= 0) {
+				active.add(new RoomDtos.ActiveSynergyView(rule.name(),
+						participants.stream().map(player -> player.nickname).toList()));
+			}
+		}
+		return active;
 	}
 
 	// 플레이어 검거 시 카드 효과(칸, 뱀파이어헌터, 스피드런, 고인물 등)
@@ -700,7 +832,8 @@ public class RoomService {
 			if (tier == null) {
 				throw new RoomException(HttpStatus.BAD_REQUEST, "INVALID_CARD_TIER", "카드 등급이 올바르지 않습니다.");
 			}
-			int price = cardsOfTier(tier).getFirst().price();
+			// 과거인: 이번 라운드 첫 뽑기 1회 무료
+			int price = player.freeDraw ? 0 : cardsOfTier(tier).getFirst().price();
 			if (player.gold < price) {
 				throw new RoomException(HttpStatus.CONFLICT, "NOT_ENOUGH_GOLD",
 						"골드가 부족합니다. (" + price + "G 필요)");
@@ -712,20 +845,55 @@ public class RoomService {
 			}
 			List<CardCatalog.CardDefinition> pool = cardsOfTier(drawnTier);
 			player.gold -= price;
-			// 한 번에 1장만 보유. 다시 뽑으면 교체된다.
-			player.cardId = pool.get(secureRandom.nextInt(pool.size())).id();
-			// 새로 뽑은 카드는 비공개. 공개했던 카드를 바꾸면 모두의 화면에서 내려간다.
-			boolean wasRevealed = player.cardRevealed;
-			player.cardRevealed = false;
-			player.robbedWithCard = 0;
-			player.cardUses = 0;
-			player.cardActivated = false;
+			player.freeDraw = false;
 			// TODO: 라운드별 카드 구매 내역 로깅
+			replaceCard(room, player, pool.get(secureRandom.nextInt(pool.size())).id());
 			sendWallet(player);
-			sendMyCard(player);
-			if (wasRevealed) {
-				broadcastRoom(room);
+		}
+	}
+
+	// 무료 다시 뽑기 (다알아 박사님): 지금 카드를 정해진 등급의 카드로 바꾼다. 바뀐 카드에는 효과가 없으므로 1회다.
+	public void freeReroll(PlayerSession session, String roomName) {
+		GameRoom room = getMemberRoom(session, roomName);
+		synchronized (room) {
+			if (!CARD_SHOP_PHASES.contains(room.phase)) {
+				throw new RoomException(HttpStatus.CONFLICT, "CARD_SHOP_CLOSED", "지금은 인물 카드를 뽑을 수 없습니다.");
 			}
+			GameRoom.Player player = requirePlayer(session, room.name);
+			if (!player.alive) {
+				throw new RoomException(HttpStatus.CONFLICT, "DEAD_PLAYER", "사망한 플레이어는 카드를 뽑을 수 없습니다.");
+			}
+			// 카드 효과(다알아 박사님)를 먼저 쓰고, 없으면 시너지로 받은 다시 뽑기(통모)를 쓴다.
+			String tier = cardCatalog.effectsOf(player.cardId).stream()
+					.filter(effect -> effect.action() == CardCatalog.EffectAction.FREE_REROLL)
+					.map(CardCatalog.CardEffect::tier)
+					.findFirst()
+					.orElse(null);
+			if (tier == null && player.cardId != null && player.bonusRerollTier != null) {
+				tier = player.bonusRerollTier;
+				player.bonusRerollTier = null;
+			}
+			if (tier == null) {
+				throw new RoomException(HttpStatus.CONFLICT, "NO_FREE_REROLL", "무료로 다시 뽑을 수 있는 카드가 없습니다.");
+			}
+			List<CardCatalog.CardDefinition> pool = cardsOfTier(tier);
+			replaceCard(room, player, pool.get(secureRandom.nextInt(pool.size())).id());
+		}
+	}
+
+	// 한 번에 1장만 보유. 새 카드로 바꾸면 카드에 딸린 기록은 초기화되고, 새 카드는 비공개다.
+	private void replaceCard(GameRoom room, GameRoom.Player player, String cardId) {
+		boolean wasRevealed = player.cardRevealed;
+		player.cardId = cardId;
+		player.cardRevealed = false;
+		player.robbedWithCard = 0;
+		player.cardUses = 0;
+		player.cardActivated = false;
+		sendMyCard(player);
+		// 공개했던 카드를 바꾸면 모두의 화면에서 내려가고 시너지도 다시 계산한다.
+		if (wasRevealed) {
+			refreshSynergies(room);
+			broadcastRoom(room);
 		}
 	}
 
@@ -740,9 +908,13 @@ public class RoomService {
 		return cardCatalog.cards().stream().filter(card -> card.tier().equals(tier)).toList();
 	}
 
+	private RoomDtos.MyCardView myCardOf(GameRoom.Player player) {
+		return new RoomDtos.MyCardView(player.cardId, player.cardActivated, player.bonusRerollTier, player.freeDraw);
+	}
+
 	private void sendMyCard(GameRoom.Player player) {
 		messagingTemplate.getObject().convertAndSendToUser(player.id, "/queue/private",
-				RoomDtos.RoomEvent.of("myCard", new RoomDtos.MyCardView(player.cardId, player.cardActivated)));
+				RoomDtos.RoomEvent.of("myCard", myCardOf(player)));
 	}
 
 	WalletView walletOf(PlayerSession session) {
@@ -771,8 +943,14 @@ public class RoomService {
 		room.robberySealedTurns = 0;
 		room.rainTurns = 0;
 		room.trialPlayerIds.clear();
-		// 사망자는 다음 라운드에 부활하고, 인물 카드는 그 라운드에만 유효하다.
+		room.synergyPeaks.clear();
+		room.synergyParticipantPeaks.clear();
+		// 사망자는 다음 라운드에 부활하고, 인물 카드와 시너지는 그 라운드에만 유효하다.
 		for (GameRoom.Player player : room.players.values()) {
+			resetSynergyState(player);
+			// 과거인: 지난 라운드 시너지로 이번 라운드 인물 카드 1회 무료
+			player.freeDraw = player.freeDrawNextRound;
+			player.freeDrawNextRound = false;
 			player.alive = true;
 			player.turnGoldPulled = false;
 			player.cardId = null;
@@ -789,6 +967,13 @@ public class RoomService {
 					RoomDtos.RoomEvent.of("role", new RoomDtos.RoleView(player.role)));
 		}
 		enterPhase(room, "PREPARE", roleRevealSeconds, () -> announceRoundStart(room));
+	}
+
+	private void resetSynergyState(GameRoom.Player player) {
+		player.synergyEffects = new ArrayList<>();
+		player.synergyGoldGranted.clear();
+		player.synergyRewardsGranted.clear();
+		player.bonusRerollTier = null;
 	}
 
 	private void announceRoundStart(GameRoom room) {
@@ -884,6 +1069,7 @@ public class RoomService {
 				caught.alive = false;
 			}
 		}
+		refreshSynergies(room);
 		applyCatchRewards(room, caughtRoles, thiefCaught);
 		caughtRoles.values().forEach(role -> applyCatchCardEffects(room, role));
 		room.players.values().forEach(this::sendWallet);
@@ -915,7 +1101,7 @@ public class RoomService {
 			// 도적 검거: 생존 시민(살인마 포함) +1G. 도적은 골드를 잃지 않는다.
 			for (GameRoom.Player player : alivePlayers(room)) {
 				if (player.role != Role.THIEF) {
-					player.gold += 1;
+					player.gold += catchReward(player);
 				}
 			}
 		} else {
@@ -928,7 +1114,7 @@ public class RoomService {
 					// 살인마 검거: 살인마 제외 생존자 전원 +1G (도적 포함, 사망자 제외)
 					for (GameRoom.Player player : room.players.values()) {
 						if (player != caught && player.alive) {
-							player.gold += 1;
+							player.gold += catchReward(player);
 						}
 					}
 				} else {
@@ -938,6 +1124,16 @@ public class RoomService {
 			}
 		}
 		room.players.values().forEach(this::sendWallet);
+	}
+
+	// 검거 보상 1G. 제육즈 시너지는 배로 받는다.
+	private int catchReward(GameRoom.Player player) {
+		int multiplier = effectsOf(player, CardCatalog.EffectTrigger.CATCH_REWARD).stream()
+				.filter(effect -> effect.action() == CardCatalog.EffectAction.MULTIPLY_CATCH_REWARD)
+				.mapToInt(CardCatalog.CardEffect::amount)
+				.max()
+				.orElse(1);
+		return multiplier;
 	}
 
 	// ---- 턴 정산 → 밤 → 다음 턴 ----
@@ -954,7 +1150,8 @@ public class RoomService {
 				player.gold += turnGold;
 			}
 			for (CardCatalog.CardEffect effect : effectsOf(player, CardCatalog.EffectTrigger.TURN_END)) {
-				if (effect.action() == CardCatalog.EffectAction.GAIN_GOLD) {
+				boolean onThisTurn = effect.everyTurns() == null || room.turn % effect.everyTurns() == 0;
+				if (effect.action() == CardCatalog.EffectAction.GAIN_GOLD && onThisTurn) {
 					player.gold += effect.amount();
 				}
 			}
@@ -1095,6 +1292,9 @@ public class RoomService {
 
 	private void afterNight(GameRoom room) {
 		GameRoom.Player victim = room.rainTurns > 0 ? null : carryOutKill(room);
+		if (victim != null) {
+			refreshSynergies(room);
+		}
 		if (room.rainTurns > 0) {
 			room.rainTurns--;
 		}
@@ -1190,6 +1390,13 @@ public class RoomService {
 				}
 			}
 			player.gold += reward;
+			for (CardCatalog.CardEffect effect : effectsOf(player, CardCatalog.EffectTrigger.ROUND_END)) {
+				if (effect.action() == CardCatalog.EffectAction.GAIN_GOLD) {
+					player.gold += effect.amount();
+				} else if (effect.action() == CardCatalog.EffectAction.FREE_DRAW_NEXT_ROUND) {
+					player.freeDrawNextRound = true;
+				}
+			}
 			// 해룡: 카드를 가진 뒤 강탈당한 적이 없으면 보너스
 			if (player.robbedWithCard == 0) {
 				player.gold += sumAmount(player, CardCatalog.EffectTrigger.ROUND_END,
@@ -1239,11 +1446,16 @@ public class RoomService {
 		room.turn = 0;
 		room.backgroundIndex = null;
 		room.lastVoteResult = null;
+		room.synergyPeaks.clear();
+		room.synergyParticipantPeaks.clear();
 		room.rainTurns = 0;
 		room.robberySealedTurns = 0;
 		room.nightVictim = null;
 		room.trialPlayerIds.clear();
 		for (GameRoom.Player player : room.players.values()) {
+			resetSynergyState(player);
+			player.freeDraw = false;
+			player.freeDrawNextRound = false;
 			player.killTarget = null;
 			player.ready = false;
 			player.role = null;
@@ -1443,6 +1655,9 @@ public class RoomService {
 				return;
 			}
 			room.trialPlayerIds.remove(playerId);
+			if (CARD_SHOP_PHASES.contains(room.phase)) {
+				refreshSynergies(room);
+			}
 			sessions.values().removeIf(session -> session.playerId().equals(playerId));
 			playerSessions.remove(playerId);
 			activeConnections.remove(playerId);
@@ -1590,7 +1805,8 @@ public class RoomService {
 		return new RoomView(room.name, room.phase, List.copyOf(players), room.config, room.backgroundIndex,
 				room.round, room.turn, room.phaseEndsAt, minPlayers, maxTurns,
 				"RESULT".equals(room.phase) ? room.lastVoteResult : null,
-				roundSummaryView(room), room.nightVictim, room.rainTurns);
+				roundSummaryView(room), room.nightVictim, room.rainTurns,
+				"WAITING".equals(room.phase) ? List.of() : activeSynergies(room));
 	}
 
 	private RoomDtos.RoundSummaryView roundSummaryView(GameRoom room) {

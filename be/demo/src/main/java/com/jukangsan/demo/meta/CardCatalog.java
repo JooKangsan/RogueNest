@@ -19,6 +19,8 @@ public final class CardCatalog {
 	private final List<SynergyDefinition> synergies;
 	// 카드별 효과 (서버 판정용). 화면에 보여주는 설명은 CardDefinition.effect 문구를 쓴다.
 	private final Map<String, List<CardEffect>> effectsByCardId;
+	// 시너지 발동 규칙 (서버 판정용). 시너지 효과는 게임 내에 공개하지 않는다.
+	private final List<SynergyRule> synergyRules;
 
 	public CardCatalog(ObjectMapper objectMapper) {
 		CatalogData data;
@@ -60,6 +62,22 @@ public final class CardCatalog {
 			}
 		}
 
+		List<SynergyRule> rules = new java.util.ArrayList<>();
+		for (SynergyData synergy : data.synergies()) {
+			if (synergy.countBy() == null || synergy.levels() == null || synergy.levels().isEmpty()) {
+				throw new IllegalStateException("시너지 '" + synergy.name() + "'에 발동 단계(levels/countBy)가 없습니다.");
+			}
+			int previous = 0;
+			for (SynergyLevel level : synergy.levels()) {
+				if (level.count() <= previous || level.effects() == null) {
+					throw new IllegalStateException("시너지 '" + synergy.name() + "'의 단계 인원은 오름차순이어야 합니다.");
+				}
+				previous = level.count();
+				level.effects().forEach(effect -> validateEffect(synergy.id(), effect));
+			}
+			rules.add(new SynergyRule(synergy.id(), synergy.name(), synergy.countBy(), List.copyOf(synergy.levels())));
+		}
+		this.synergyRules = List.copyOf(rules);
 		this.synergies = data.synergies().stream()
 				.map(synergy -> new SynergyDefinition(synergy.id(), synergy.name(),
 						List.copyOf(synergyCardNames.get(synergy.name())), synergy.requirement()))
@@ -79,11 +97,16 @@ public final class CardCatalog {
 							.filter(effect -> effect.trigger() == EffectTrigger.ACTIVATE)
 							.findFirst()
 							.orElse(null);
+					String freeRerollTier = effects.get(card.id()).stream()
+							.filter(effect -> effect.action() == EffectAction.FREE_REROLL)
+							.map(CardEffect::tier)
+							.findFirst()
+							.orElse(null);
 					return new CardDefinition(card.id(), card.name(), card.tier(), card.price(),
 							card.effect(), blankToNull(card.description()), blankToNull(card.image()), card.active(),
 							card.synergies() == null ? List.of() : List.copyOf(card.synergies()),
 							activation == null ? null : activation.label(),
-							activation != null && activation.action().targeted());
+							activation != null && activation.action().targeted(), freeRerollTier);
 				})
 				.toList();
 	}
@@ -96,6 +119,14 @@ public final class CardCatalog {
 		return synergies;
 	}
 
+	public CardDefinition card(String cardId) {
+		return cardId == null ? null : cards.stream().filter(card -> card.id().equals(cardId)).findFirst().orElse(null);
+	}
+
+	public List<SynergyRule> synergyRules() {
+		return synergyRules;
+	}
+
 	public List<CardEffect> effectsOf(String cardId) {
 		return cardId == null ? List.of() : effectsByCardId.getOrDefault(cardId, List.of());
 	}
@@ -106,6 +137,9 @@ public final class CardCatalog {
 		}
 		if (effect.trigger() == EffectTrigger.ACTIVATE && (effect.label() == null || effect.label().isBlank())) {
 			throw new IllegalStateException("카드 '" + cardId + "'의 사용 효과에 버튼 이름(label)이 없습니다.");
+		}
+		if (effect.action() == EffectAction.FREE_REROLL && effect.tier() == null) {
+			throw new IllegalStateException("카드 '" + cardId + "'의 다시 뽑기 효과에 등급(tier)이 없습니다.");
 		}
 		boolean needsRoles = effect.trigger() == EffectTrigger.PLAYER_CAUGHT
 				|| effect.trigger() == EffectTrigger.SELF_CAUGHT;
@@ -131,7 +165,13 @@ public final class CardCatalog {
 		// 보유자가 도적으로서 강탈할 때
 		ROBBING,
 		// 보유자가 직접 사용 (토론 단계에서만, 라운드당 1회)
-		ACTIVATE
+		ACTIVATE,
+		// 보유자가 다시 뽑기 버튼을 누를 때
+		REROLL,
+		// (시너지) 발동 단계에 처음 도달했을 때 한 번
+		SYNERGY_ON,
+		// (시너지) 검거 보상을 받을 때
+		CATCH_REWARD
 	}
 
 	// 효과
@@ -165,7 +205,19 @@ public final class CardCatalog {
 		// (사용) 대상에게서 amount G 강탈 (쎈 누나)
 		STEAL_TARGET(true),
 		// (사용) 대상 즉시 살해. minTurn 턴부터 가능 (늑대인간)
-		ASSASSINATE(true);
+		ASSASSINATE(true),
+		// 지금 카드를 tier 등급 카드로 무료로 다시 뽑음 (다알아 박사님, 통모)
+		FREE_REROLL,
+		// (시너지) amount G 지급. 단계가 오르면 이전 지급액과의 차이만 더 준다 (효과 교체)
+		GRANT_GOLD,
+		// (시너지) 코인 amount개 지급
+		GRANT_COIN,
+		// (시너지) 참여자가 1명 늘 때마다 그 시점의 참여자 전원 amount G (후열의밤)
+		GOLD_PER_NEW_PARTICIPANT,
+		// (시너지) 검거 보상 amount배 (제육즈)
+		MULTIPLY_CATCH_REWARD,
+		// (시너지) 다음 라운드 인물 카드 1회 무료 (과거인)
+		FREE_DRAW_NEXT_ROUND;
 
 		private final boolean targeted;
 
@@ -189,6 +241,9 @@ public final class CardCatalog {
 	//   maxUses: 카드를 가진 동안 이 횟수까지만 발동
 	//   minTurn: 이 턴부터 가능
 	//   label: 사용(ACTIVATE) 버튼 이름
+	//   tier: 다시 뽑기(FREE_REROLL)로 나올 카드 등급
+	//   everyTurns: 이 턴 간격마다 (2면 짝수 턴)
+	//   cardName / notCardName: (시너지) 이 이름의 카드를 낸 참여자만 / 그 외 참여자만
 	public record CardEffect(
 			EffectTrigger trigger,
 			List<String> caughtRoles,
@@ -196,6 +251,10 @@ public final class CardCatalog {
 			Integer minTurn,
 			Integer maxUses,
 			String label,
+			String tier,
+			Integer everyTurns,
+			String cardName,
+			String notCardName,
 			EffectAction action,
 			int amount
 	) {
@@ -216,7 +275,9 @@ public final class CardCatalog {
 			// 카드 UI 하단 사용 버튼 이름. 사용할 수 없는 카드면 null
 			String actionLabel,
 			// 사용할 때 대상을 골라야 하는지
-			boolean actionTargeted
+			boolean actionTargeted,
+			// 무료 다시 뽑기로 나올 등급. 없으면 null
+			String freeRerollTier
 	) {
 	}
 
@@ -230,7 +291,21 @@ public final class CardCatalog {
 	private record CatalogData(List<CardData> cards, List<SynergyData> synergies) {
 	}
 
-	private record SynergyData(String id, String name, String requirement) {
+	private record SynergyData(String id, String name, String requirement, SynergyCountBy countBy,
+			List<SynergyLevel> levels) {
+	}
+
+	// 시너지 인원 세는 법: 공개한 플레이어 수 / 서로 다른 카드 이름 수
+	public enum SynergyCountBy {
+		PLAYERS,
+		CARD_NAMES
+	}
+
+	// count명(종) 이상이면 이 단계. 높은 단계가 되면 낮은 단계 효과는 교체된다.
+	public record SynergyLevel(int count, List<CardEffect> effects) {
+	}
+
+	public record SynergyRule(String id, String name, SynergyCountBy countBy, List<SynergyLevel> levels) {
 	}
 
 	private record CardData(String id, String name, String tier, int price, String effect,

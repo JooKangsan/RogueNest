@@ -57,6 +57,9 @@ public class RoomWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
 		registry.addEndpoint("/ws");
+		// 한 연결에서 온 메시지는 보낸 순서대로 처리한다.
+		// 클라이언트는 개인 큐 구독 직후 스냅샷을 요청하므로, 순서가 뒤바뀌면 스냅샷을 받지 못한다.
+		registry.setPreserveReceiveOrder(true);
 	}
 
 	@Override

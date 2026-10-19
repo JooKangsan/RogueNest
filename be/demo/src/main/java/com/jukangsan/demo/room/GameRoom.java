@@ -40,6 +40,10 @@ final class GameRoom {
 	int robberySealedTurns;
 	// 장마: 강탈과 살인마 행동이 막힌 남은 턴 수
 	int rainTurns;
+	// 시너지별로 이번 라운드에 도달한 가장 높은 단계(0부터). 처음 도달할 때만 발동 알림을 보낸다.
+	final Map<String, Integer> synergyPeaks = new java.util.HashMap<>();
+	// 시너지별로 이번 라운드에 도달한 가장 많은 참여자 수 (후열의밤: 1명 늘 때마다 1회 지급)
+	final Map<String, Integer> synergyParticipantPeaks = new java.util.HashMap<>();
 
 	GameRoom(String name, String passwordSalt, String passwordHash, RoomConfig config) {
 		this.name = name;
@@ -68,6 +72,17 @@ final class GameRoom {
 		boolean cardActivated;
 		// 미래인으로 남은 턴 골드를 당겨 받았는지. 이후 턴 골드를 받지 않는다(라운드마다 초기화)
 		boolean turnGoldPulled;
+		// 지금 발동 중인 시너지에서 받는 지속 효과 (시너지가 바뀔 때마다 다시 계산)
+		List<com.jukangsan.demo.meta.CardCatalog.CardEffect> synergyEffects = new ArrayList<>();
+		// 시너지별로 이번 라운드에 받은 1회성 골드. 단계가 오르면 차이만 더 받는다.
+		final Map<String, Integer> synergyGoldGranted = new java.util.HashMap<>();
+		// 이번 라운드에 이미 받은 1회성 시너지 보상 (코인, 리롤 등)
+		final java.util.Set<String> synergyRewardsGranted = new java.util.HashSet<>();
+		// 통모로 받은 무료 다시 뽑기 등급. 없으면 null
+		String bonusRerollTier;
+		// 이번 라운드 인물 카드 1회 무료 / 다음 라운드에 무료가 되는지 (과거인)
+		boolean freeDraw;
+		boolean freeDrawNextRound;
 		// 이번 턴 투표. null=아직 안 함, ABSTAIN=기권, 그 외=대상 플레이어 id
 		String vote;
 		// 살인마가 이번 밤에 고른 살해 대상 플레이어 id. 밤이 끝날 때 실행한다.

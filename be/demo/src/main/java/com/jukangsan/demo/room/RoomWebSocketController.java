@@ -82,6 +82,11 @@ public class RoomWebSocketController {
 		roomService.activateCard(session(principal), roomName, request.target());
 	}
 
+	@MessageMapping("/rooms/{roomName}/reroll")
+	public void reroll(@DestinationVariable String roomName, Principal principal) {
+		roomService.freeReroll(session(principal), roomName);
+	}
+
 	@MessageMapping("/rooms/{roomName}/reveal")
 	public void reveal(@DestinationVariable String roomName, Principal principal) {
 		roomService.revealCard(session(principal), roomName);

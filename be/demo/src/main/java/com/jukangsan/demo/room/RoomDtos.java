@@ -54,8 +54,13 @@ public final class RoomDtos {
 			// 지난밤 살인마에게 살해된 플레이어. 없으면 null
 			String nightVictim,
 			// 장마로 강탈과 살인마 행동이 막힌 남은 턴 수
-			int rainTurns
+			int rainTurns,
+			// 발동 중인 시너지와 참여자. 조합은 공개하고 효과는 공개하지 않는다.
+			List<ActiveSynergyView> synergies
 	) {
+	}
+
+	public record ActiveSynergyView(String name, List<String> nicknames) {
 	}
 
 	public record RoomSummary(
@@ -90,7 +95,8 @@ public final class RoomDtos {
 	}
 
 	// 본인 보유 인물 카드. 없으면 cardId=null. activated: 이번 라운드에 카드 사용 효과를 썼는지
-	public record MyCardView(String cardId, boolean activated) {
+	// bonusRerollTier: 시너지로 받은 무료 다시 뽑기 등급, freeDraw: 다음 뽑기 1회 무료
+	public record MyCardView(String cardId, boolean activated, String bonusRerollTier, boolean freeDraw) {
 	}
 
 	// 라운드 종료 결과. 라운드가 끝나면 직업·골드·코인을 모두 공개한다.

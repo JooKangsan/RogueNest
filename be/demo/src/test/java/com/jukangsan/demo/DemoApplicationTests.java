@@ -23,7 +23,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 		properties = "game.room.disconnect-grace-seconds=1")
 class DemoApplicationTests {
 	private static final Pattern ROOM_NAME = Pattern.compile("\"roomName\":\"([^\"]+)\"");
-	private final HttpClient httpClient = HttpClient.newHttpClient();
+	// HTTP/2 업그레이드(h2c) 시도 없이 HTTP/1.1로만 요청한다. 업그레이드 중 연결이 끊기면 응답 없이 실패할 수 있다.
+	private final HttpClient httpClient = HttpClient.newBuilder()
+			.version(HttpClient.Version.HTTP_1_1)
+			.build();
 
 	@Autowired
 	private CardCatalog cardCatalog;

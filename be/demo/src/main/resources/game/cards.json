@@ -118,7 +118,15 @@
       "description": "모든걸 다아는 박사님 카드 리롤권도 안다",
       "image": "common_know_it_all.webp",
       "synergies": ["후열의밤", "로열"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "REROLL",
+          "action": "FREE_REROLL",
+          "tier": "희귀",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "common_steel_helmet",
@@ -424,7 +432,15 @@
       "description": "모든걸 다아는 박사님 카드 리롤권도 안다",
       "image": "rare_know_it_all.webp",
       "synergies": ["후열의밤", "로열"],
-      "active": false
+      "active": false,
+      "effects": [
+        {
+          "trigger": "REROLL",
+          "action": "FREE_REROLL",
+          "tier": "전설",
+          "amount": 0
+        }
+      ]
     },
     {
       "id": "rare_steel_helmet",
@@ -865,67 +881,300 @@
     {
       "id": "night_shift",
       "name": "후열의밤",
-      "requirement": "2인부터"
+      "requirement": "2인부터",
+      "countBy": "PLAYERS",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "GOLD_PER_NEW_PARTICIPANT",
+              "amount": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "royal",
       "name": "로열",
-      "requirement": "4인 전원"
+      "requirement": "4인 전원",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 4,
+          "effects": [
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "GRANT_COIN",
+              "amount": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "jeyukz",
       "name": "제육즈",
-      "requirement": "4인 전원"
+      "requirement": "4인 전원",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 4,
+          "effects": [
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "GRANT_GOLD",
+              "amount": 5
+            },
+            {
+              "trigger": "CATCH_REWARD",
+              "action": "MULTIPLY_CATCH_REWARD",
+              "amount": 2
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "daegam",
       "name": "대감님",
-      "requirement": "5인 전원"
+      "requirement": "5인 전원",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 5,
+          "effects": [
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "GRANT_GOLD",
+              "cardName": "칸",
+              "amount": 10
+            },
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "GRANT_GOLD",
+              "notCardName": "칸",
+              "amount": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "dopamine",
       "name": "도파민즈",
-      "requirement": "2인 / 3인"
+      "requirement": "2인 / 3인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "GRANT_GOLD",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "count": 3,
+          "effects": [
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "GRANT_GOLD",
+              "amount": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "tank",
       "name": "탱커",
-      "requirement": "2인 / 3인"
+      "requirement": "2인 / 3인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "ROBBED",
+              "action": "NULLIFY",
+              "amount": 0
+            }
+          ]
+        },
+        {
+          "count": 3,
+          "effects": [
+            {
+              "trigger": "ROBBED",
+              "action": "NULLIFY",
+              "amount": 0
+            },
+            {
+              "trigger": "KILLED",
+              "action": "NULLIFY",
+              "amount": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "my_love",
       "name": "마이러부",
-      "requirement": "2인 / 3인"
+      "requirement": "2인 / 3인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "TURN_END",
+              "action": "GAIN_GOLD",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "count": 3,
+          "effects": [
+            {
+              "trigger": "TURN_END",
+              "action": "GAIN_GOLD",
+              "amount": 2
+            },
+            {
+              "trigger": "ROUND_END",
+              "action": "GAIN_GOLD",
+              "amount": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "tongmo",
       "name": "통모",
-      "requirement": "2인"
+      "requirement": "2인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "GRANT_GOLD",
+              "amount": 5
+            },
+            {
+              "trigger": "SYNERGY_ON",
+              "action": "FREE_REROLL",
+              "tier": "전설",
+              "amount": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "gold_sil",
       "name": "골실즈",
-      "requirement": "2인"
+      "requirement": "2인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "TURN_END",
+              "action": "GAIN_GOLD",
+              "amount": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "rose_pearl",
       "name": "로즈&펄",
-      "requirement": "2인"
+      "requirement": "2인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "TURN_END",
+              "action": "GAIN_GOLD",
+              "amount": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "michu",
       "name": "미츄",
-      "requirement": "2인"
+      "requirement": "2인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "TURN_END",
+              "action": "GAIN_GOLD",
+              "amount": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "two_jobs",
       "name": "투잡러",
-      "requirement": "2인"
+      "requirement": "2인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "TURN_END",
+              "action": "GAIN_GOLD",
+              "everyTurns": 2,
+              "amount": 1
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "past_person",
       "name": "과거인",
-      "requirement": "2인"
+      "requirement": "2인",
+      "countBy": "CARD_NAMES",
+      "levels": [
+        {
+          "count": 2,
+          "effects": [
+            {
+              "trigger": "ROUND_END",
+              "action": "GAIN_GOLD",
+              "amount": 10
+            },
+            {
+              "trigger": "ROUND_END",
+              "action": "FREE_DRAW_NEXT_ROUND",
+              "amount": 0
+            }
+          ]
+        }
+      ]
     }
   ]
 }
