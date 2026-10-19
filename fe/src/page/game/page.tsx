@@ -345,6 +345,22 @@ export default function GamePage() {
             밤사이 {room.nightVictim}님이 살해당했습니다
           </p>
         )}
+        {room.synergies.length > 0 && (
+          <ul
+            aria-label="발동 중인 시너지"
+            className="flex flex-wrap justify-center gap-1.5"
+          >
+            {room.synergies.map((synergy) => (
+              <li
+                key={synergy.name}
+                title={synergy.nicknames.join(", ")}
+                className="rounded-full border-2 border-amber-500 bg-stone-900/85 px-3 py-0.5 text-sm font-bold text-amber-200 shadow"
+              >
+                ✨ #{synergy.name}
+              </li>
+            ))}
+          </ul>
+        )}
         {room.rainTurns > 0 && (
           <p
             role="status"
@@ -507,6 +523,10 @@ export default function GamePage() {
       const card = catalog?.cards.find((item) => item.id === cardId);
       return card ? `${card.name}(${card.tier})` : undefined;
     };
+    // 무료 다시 뽑기: 카드 효과(다알아 박사님)가 먼저, 없으면 시너지(통모)로 받은 것
+    const rerollTier =
+      myCard?.freeRerollTier ??
+      (myCard ? (myCardState?.bonusRerollTier ?? null) : null);
     // 인물 카드는 라운드 중(역할 배정 후) 언제든, 생존자만 뽑을 수 있다. 서버도 같은 규칙으로 거부한다.
     const canDrawCard =
       isConnected &&
@@ -537,6 +557,11 @@ export default function GamePage() {
           onReveal={
             canDrawCard && myCard ? () => publish("reveal", {}) : undefined
           }
+          freeReroll={
+            canDrawCard && rerollTier
+              ? { tier: rerollTier, onClick: () => publish("reroll", {}) }
+              : null
+          }
           activated={Boolean(myCardState?.activated)}
           onActivate={
             canActivate && myCard
@@ -556,6 +581,7 @@ export default function GamePage() {
           onDrawCard={
             canDrawCard ? (tier) => publish("draw", { tier }) : undefined
           }
+          freeDraw={Boolean(myCardState?.freeDraw)}
         />
       ),
       progress: <ProgressPanel phase={currentRoom.phase} />,

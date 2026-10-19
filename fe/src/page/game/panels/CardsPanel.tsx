@@ -114,11 +114,9 @@ export default function CardsPanel({
   activated: boolean;
   // 지금 카드를 사용할 수 있을 때만 넘긴다.
   onActivate?: () => void;
-  // 무료로 다시 뽑을 수 있을 때만 넘긴다. 없으면 다시 뽑기 버튼은 비활성.
-  // TODO: 인물 카드 구현 때 아래 두 경우에 연결한다.
-  //  - 다알아 박사님 보유 (일반 → 희귀, 희귀 → 전설 1회)
-  //  - 과거인 시너지 (다음 라운드 인물 카드 1회 무료)
-  freeReroll?: { onClick: () => void } | null;
+  // 무료로 다시 뽑을 수 있을 때만 넘긴다. tier: 새로 나올 카드 등급
+  // (다알아 박사님: 일반 → 희귀, 희귀 → 전설 / 통모 시너지: 전설)
+  freeReroll?: { tier: string; onClick: () => void } | null;
 }) {
   // 확대해서 보는 카드. 내용은 매번 최신 상태로 다시 만든다(사용 버튼 활성 여부 등).
   const [openCard, setOpenCard] = useState<{
@@ -163,13 +161,13 @@ export default function CardsPanel({
             disabled={!freeReroll}
             title={
               freeReroll
-                ? "보유한 인물 카드를 무료로 다시 뽑습니다."
-                : "다알아 박사님을 보유하거나 과거인 시너지 혜택이 있으면 사용할 수 있어요."
+                ? `보유한 인물 카드를 ${freeReroll.tier} 카드로 무료로 다시 뽑습니다.`
+                : "다알아 박사님을 보유하거나 통모 시너지 혜택이 있으면 사용할 수 있어요."
             }
             className="min-h-11 w-full rounded-md bg-blue-700 text-sm font-semibold text-white disabled:opacity-40"
             onClick={freeReroll?.onClick}
           >
-            다시 뽑기
+            {freeReroll ? `다시 뽑기 (${freeReroll.tier})` : "다시 뽑기"}
           </button>
         </MiniCard>
         <MiniCard

@@ -25,6 +25,7 @@ export default function MyInfoPanel({
   onExchangeCoin,
   catalog,
   onDrawCard,
+  freeDraw = false,
 }: {
   wallet: Wallet | null;
   coinPrice: number;
@@ -33,6 +34,8 @@ export default function MyInfoPanel({
   catalog: CardCatalog | null;
   // 카드를 뽑을 수 있을 때만 넘긴다. (라운드 중, 생존자만)
   onDrawCard?: (tier: CardTierKey) => void;
+  // 다음 뽑기 1회 무료 (과거인 시너지)
+  freeDraw?: boolean;
 }) {
   const canExchange =
     isConnected && wallet !== null && wallet.gold >= coinPrice;
@@ -72,13 +75,16 @@ export default function MyInfoPanel({
 
       <h3 className="mt-4 font-bold">인물 카드 뽑기</h3>
       <p className="mb-2 text-sm text-amber-950/70">
-        원하는 등급의 인물 카드를 골드로 뽑을 수 있습니다.
+        {freeDraw
+          ? "이번 뽑기는 등급과 상관없이 1회 무료예요!"
+          : "원하는 등급의 인물 카드를 골드로 뽑을 수 있습니다."}
       </p>
       <div className="flex flex-col gap-2">
         {CARD_GRADES.map((grade) => {
-          const price = catalog?.cards.find(
+          const listPrice = catalog?.cards.find(
             (card) => card.tier === grade.name,
           )?.price;
+          const price = freeDraw && listPrice !== undefined ? 0 : listPrice;
           const affordable =
             price !== undefined && wallet !== null && wallet.gold >= price;
           return (
