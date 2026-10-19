@@ -50,8 +50,8 @@ class RoomWebSocketIntegrationTests {
 		stompClient.setTaskScheduler(heartbeatScheduler);
 		stompClient.start();
 
-		String roomCode = roomService.createRoom(null);
-		RoomDtos.JoinRoomResponse join = roomService.joinRoom(roomCode, "websocket-client", null);
+		String roomName = roomService.createRoom("웹소켓 대기실", null);
+		RoomDtos.JoinRoomResponse join = roomService.joinRoom(roomName, "websocket-client", null);
 		CountDownLatch privateSnapshotReceived = new CountDownLatch(1);
 		CountDownLatch roomUpdateReceived = new CountDownLatch(1);
 		AtomicReference<Map<?, ?>> privateSnapshot = new AtomicReference<>();
@@ -86,10 +86,10 @@ class RoomWebSocketIntegrationTests {
 				roomUpdateReceived.countDown();
 			}
 		});
-		session.subscribe("/topic/room/" + roomCode, roomHandler);
+		session.subscribe("/topic/room/" + roomName, roomHandler);
 		session.subscribe("/user/queue/private", privateHandler);
 		Thread.sleep(250);
-		session.send("/app/rooms/" + roomCode + "/snapshot", Map.of());
+		session.send("/app/rooms/" + roomName + "/snapshot", Map.of());
 
 		assertThat(privateSnapshotReceived.await(5, TimeUnit.SECONDS)).withFailMessage(
 				"Private snapshot was not delivered. Client error: %s", clientError.get()).isTrue();
@@ -97,7 +97,7 @@ class RoomWebSocketIntegrationTests {
 		assertThat(((Map<?, ?>) privateSnapshot.get().get("payload")).get("nickname"))
 				.isEqualTo("websocket-client");
 
-		session.send("/app/rooms/" + roomCode + "/ready", true);
+		session.send("/app/rooms/" + roomName + "/ready", true);
 		assertThat(roomUpdateReceived.await(5, TimeUnit.SECONDS)).isTrue();
 		assertThat(roomUpdate.get().get("type")).isEqualTo("room");
 		assertThat(hasReadyPlayer(roomUpdate.get())).isTrue();

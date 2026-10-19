@@ -5,6 +5,8 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,21 +35,37 @@ public final class CardCatalog {
 		if (cardsById.size() != data.cards().size()) {
 			throw new IllegalStateException("게임 카드 데이터에 중복된 카드 ID가 있습니다.");
 		}
-		Set<String> cardNames = data.cards().stream().map(CardData::name).collect(Collectors.toSet());
-		for (SynergyDefinition synergy : data.synergies()) {
-			if (!cardNames.containsAll(synergy.cards())) {
-				throw new IllegalStateException("시너지 '" + synergy.name() + "'에 등록되지 않은 카드가 있습니다.");
+		// 시너지 구성 카드는 각 카드 데이터의 synergies를 모아 만든다. 등급마다 참여 여부가 다를 수 있다.
+		Map<String, Set<String>> synergyCardNames = new LinkedHashMap<>();
+		for (SynergyData synergy : data.synergies()) {
+			if (synergyCardNames.put(synergy.name(), new LinkedHashSet<>()) != null) {
+				throw new IllegalStateException("게임 카드 데이터에 중복된 시너지 이름이 있습니다: " + synergy.name());
+			}
+		}
+		for (CardData card : data.cards()) {
+			for (String synergyName : card.synergies() == null ? List.<String>of() : card.synergies()) {
+				Set<String> names = synergyCardNames.get(synergyName);
+				if (names == null) {
+					throw new IllegalStateException(
+							"카드 '" + card.id() + "'에 존재하지 않는 시너지가 있습니다: " + synergyName);
+				}
+				names.add(card.name());
+			}
+		}
+		for (Map.Entry<String, Set<String>> entry : synergyCardNames.entrySet()) {
+			if (entry.getValue().size() < 2) {
+				throw new IllegalStateException("시너지 '" + entry.getKey() + "'에 참여하는 카드가 2종 미만입니다.");
 			}
 		}
 
-		this.synergies = List.copyOf(data.synergies());
+		this.synergies = data.synergies().stream()
+				.map(synergy -> new SynergyDefinition(synergy.id(), synergy.name(),
+						List.copyOf(synergyCardNames.get(synergy.name())), synergy.requirement()))
+				.toList();
 		this.cards = data.cards().stream()
 				.map(card -> new CardDefinition(card.id(), card.name(), card.tier(), card.price(),
-						card.effect(), card.active(),
-						this.synergies.stream()
-								.filter(synergy -> synergy.cards().contains(card.name()))
-								.map(SynergyDefinition::name)
-								.toList()))
+						card.effect(), blankToNull(card.description()), blankToNull(card.image()), card.active(),
+						card.synergies() == null ? List.of() : List.copyOf(card.synergies())))
 				.toList();
 	}
 
@@ -65,6 +83,10 @@ public final class CardCatalog {
 			String tier,
 			int price,
 			String effect,
+			// 카드 설명(플레이버 텍스트). 등급마다 다르게 쓸 수 있다.
+			String description,
+			// 카드 일러스트 파일명. 프론트 assets/cards/ 안의 파일을 가리킨다.
+			String image,
 			boolean active,
 			List<String> synergyTags
 	) {
@@ -73,9 +95,17 @@ public final class CardCatalog {
 	public record SynergyDefinition(String id, String name, List<String> cards, String requirement) {
 	}
 
-	private record CatalogData(List<CardData> cards, List<SynergyDefinition> synergies) {
+	private static String blankToNull(String value) {
+		return value == null || value.isBlank() ? null : value;
 	}
 
-	private record CardData(String id, String name, String tier, int price, String effect, boolean active) {
+	private record CatalogData(List<CardData> cards, List<SynergyData> synergies) {
+	}
+
+	private record SynergyData(String id, String name, String requirement) {
+	}
+
+	private record CardData(String id, String name, String tier, int price, String effect,
+			String description, String image, List<String> synergies, boolean active) {
 	}
 }

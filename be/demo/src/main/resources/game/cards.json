@@ -1,69 +1,601 @@
 {
   "cards": [
-    {"id":"common_kan","name":"칸","tier":"일반","price":1,"effect":"도적 검거 시 3G를 얻습니다.","active":false},
-    {"id":"common_abyss","name":"심연","tier":"일반","price":1,"effect":"이 유저가 강탈당하면 도적의 강탈을 1턴간 봉인합니다.","active":false},
-    {"id":"common_dubidu","name":"두비두","tier":"일반","price":1,"effect":"이 유저가 강탈당하면 도적의 강탈을 1턴간 봉인합니다.","active":false},
-    {"id":"common_strange_food","name":"괴식","tier":"일반","price":1,"effect":"이 유저가 강탈당하면 도적의 강탈을 1턴간 봉인합니다.","active":false},
-    {"id":"common_ice_cream_smuggler","name":"아이스크림 밀매","tier":"일반","price":1,"effect":"매 턴 1G를 얻습니다.","active":false},
-    {"id":"common_dukes_helper","name":"공작가의 조력","tier":"일반","price":1,"effect":"매 턴 1G를 얻습니다.","active":false},
-    {"id":"common_know_it_all","name":"다알아 박사님","tier":"일반","price":1,"effect":"희귀 인물 카드를 1회 무료로 리롤합니다.","active":false},
-    {"id":"common_steel_helmet","name":"강철헬멧","tier":"일반","price":1,"effect":"강탈을 무효화합니다.","active":false},
-    {"id":"common_future_person","name":"미래인","tier":"일반","price":1,"effect":"남은 턴의 턴 보상 1G를 한 번에 당겨 받습니다.","active":true},
-    {"id":"common_self_proclaimed_ninja","name":"(자칭)닌자","tier":"일반","price":1,"effect":"도적일 때 턴마다 1명을 추가로 강탈합니다.","active":false},
-    {"id":"common_vampire","name":"흡혈","tier":"일반","price":1,"effect":"도적에게 강탈당하면 도적의 골드 1G를 빼앗습니다.","active":false},
-    {"id":"common_vampire_hunter","name":"뱀파이어헌터","tier":"일반","price":1,"effect":"도적 또는 살인마 검거 성공 시 4G를 얻습니다.","active":false},
-    {"id":"common_speedrun","name":"스피드런","tier":"일반","price":1,"effect":"3턴 안에 검거하면 7G를 얻습니다.","active":false},
-    {"id":"common_veteran","name":"고인물","tier":"일반","price":1,"effect":"5턴 이내 도적 검거 시 4G를 얻습니다.","active":false},
-    {"id":"common_lawyer","name":"변호사","tier":"일반","price":1,"effect":"살인마일 때 검거당해도 생존하고 시민으로 복귀합니다.","active":false},
-    {"id":"common_miser","name":"구두쇠","tier":"일반","price":1,"effect":"라운드 종료 보상을 5G로 늘립니다.","active":false},
-    {"id":"common_sea_dragon","name":"해룡","tier":"일반","price":1,"effect":"라운드 동안 강탈당하지 않으면 5G를 얻고, 첫 강탈을 무효화합니다.","active":false},
-    {"id":"common_cutest","name":"최강귀요미","tier":"일반","price":1,"effect":"효과가 없습니다.","active":false},
+    {
+      "id": "common_kan",
+      "name": "칸",
+      "tier": "일반",
+      "price": 1,
+      "effect": "도적 검거 시 3G를 얻습니다.",
+      "description": "칸 그는 위대하다",
+      "image": "common_kan.webp",
+      "synergies": ["후열의밤", "제육즈"],
+      "active": false
+    },
+    {
+      "id": "common_abyss",
+      "name": "심연",
+      "tier": "일반",
+      "price": 1,
+      "effect": "이 유저가 강탈당하면 도적의 강탈을 1턴간 봉인합니다.",
+      "description": "ㅈ같은 짤을 보고 도적은 스턴에 걸렸습니다.",
+      "image": "common_abyss.webp",
+      "synergies": ["후열의밤", "도파민즈"],
+      "active": false
+    },
+    {
+      "id": "common_dubidu",
+      "name": "두비두",
+      "tier": "일반",
+      "price": 1,
+      "effect": "이 유저가 강탈당하면 도적의 강탈을 1턴간 봉인합니다.",
+      "description": "강탈을 하러온 도적은 두비두를 같이 하게 되었다...",
+      "image": "common_dubidu.webp",
+      "synergies": ["후열의밤"],
+      "active": false
+    },
+    {
+      "id": "common_strange_food",
+      "name": "괴식",
+      "tier": "일반",
+      "price": 1,
+      "effect": "이 유저가 강탈당하면 도적의 강탈을 1턴간 봉인합니다.",
+      "description": "그녀가 만든 음식을 먹고 그만...",
+      "image": "common_strange_food.webp",
+      "synergies": ["제육즈"],
+      "active": false
+    },
+    {
+      "id": "common_ice_cream_smuggler",
+      "name": "아이스크림 밀매",
+      "tier": "일반",
+      "price": 1,
+      "effect": "매 턴 1G를 얻습니다.",
+      "description": "야심한 시간 무인 아이스크림 가게에서..",
+      "image": "common_ice_cream_smuggler.webp",
+      "synergies": ["후열의밤", "미츄"],
+      "active": false
+    },
+    {
+      "id": "common_dukes_helper",
+      "name": "공작가의 조력",
+      "tier": "일반",
+      "price": 1,
+      "effect": "매 턴 1G를 얻습니다.",
+      "description": "영국가 귀족이다. 부모님이 주는 용돈이다",
+      "image": "common_dukes_helper.webp",
+      "synergies": ["대감님", "로즈&펄"],
+      "active": false
+    },
+    {
+      "id": "common_know_it_all",
+      "name": "다알아 박사님",
+      "tier": "일반",
+      "price": 1,
+      "effect": "희귀 인물 카드를 1회 무료로 리롤합니다.",
+      "description": "모든걸 다아는 박사님 카드 리롤권도 안다",
+      "image": "common_know_it_all.webp",
+      "synergies": ["후열의밤", "로열"],
+      "active": false
+    },
+    {
+      "id": "common_steel_helmet",
+      "name": "강철헬멧",
+      "tier": "일반",
+      "price": 1,
+      "effect": "강탈을 무효화합니다.",
+      "description": "주머니를 털어도 아무것도 안나온다. 이미 돈은 다른 사람이 관리하기 때문이다...",
+      "image": "common_steel_helmet.webp",
+      "synergies": ["후열의밤", "탱커"],
+      "active": false
+    },
+    {
+      "id": "common_future_person",
+      "name": "미래인",
+      "tier": "일반",
+      "price": 1,
+      "effect": "남은 턴의 턴 보상 1G를 한 번에 당겨 받습니다.",
+      "description": "미래애세 왔다고 주장하는 사람. 짧은 미래에서 돈을 땡겨온다",
+      "image": "common_future_person.webp",
+      "synergies": ["탱커", "투잡러"],
+      "active": true
+    },
+    {
+      "id": "common_self_proclaimed_ninja",
+      "name": "(자칭)닌자",
+      "tier": "일반",
+      "price": 1,
+      "effect": "도적일 때 턴마다 1명을 추가로 강탈합니다.",
+      "description": "닌자 호소인. 닌자보다는 이상한 사람에 가깝다.",
+      "image": "common_self_proclaimed_ninja.webp",
+      "synergies": ["과거인"],
+      "active": false
+    },
+    {
+      "id": "common_vampire",
+      "name": "흡혈",
+      "tier": "일반",
+      "price": 1,
+      "effect": "도적에게 강탈당하면 도적의 골드 1G를 빼앗습니다.",
+      "description": "뱀파이어. 외관은 여자지만 남자다.",
+      "image": "common_vampire.webp",
+      "synergies": ["도파민즈"],
+      "active": false
+    },
+    {
+      "id": "common_vampire_hunter",
+      "name": "뱀파이어헌터",
+      "tier": "일반",
+      "price": 1,
+      "effect": "도적 또는 살인마 검거 성공 시 4G를 얻습니다.",
+      "description": "뱀파이어 헌터. 옆에 있는 뱀파이어는 왜 안잡는지 모르겠다. ",
+      "image": "common_vampire_hunter.webp",
+      "synergies": ["대감님", "골실즈"],
+      "active": false
+    },
+    {
+      "id": "common_speedrun",
+      "name": "스피드런",
+      "tier": "일반",
+      "price": 1,
+      "effect": "3턴 안에 검거하면 7G를 얻습니다.",
+      "description": "모든 걸 공략하는 사람. 스피드런을 좋아한다.",
+      "image": "common_speedrun.webp",
+      "synergies": ["제육즈"],
+      "active": false
+    },
+    {
+      "id": "common_veteran",
+      "name": "고인물",
+      "tier": "일반",
+      "price": 1,
+      "effect": "5턴 이내 도적 검거 시 4G를 얻습니다.",
+      "description": "초반에 못하는 척 하고 뉴비 손발 돌려버린 경험이 있다.",
+      "image": "common_veteran.webp",
+      "synergies": [],
+      "active": false
+    },
+    {
+      "id": "common_lawyer",
+      "name": "변호사",
+      "tier": "일반",
+      "price": 1,
+      "effect": "살인마일 때 검거당해도 생존하고 시민으로 복귀합니다.",
+      "description": "변호사. 본인을 변호해 한턴 버틸 수 있다.",
+      "image": "common_lawyer.webp",
+      "synergies": ["투잡러"],
+      "active": false
+    },
+    {
+      "id": "common_miser",
+      "name": "탐관오리",
+      "tier": "일반",
+      "price": 1,
+      "effect": "라운드 종료 보상을 5G로 늘립니다.",
+      "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
+      "image": "common_miser.webp",
+      "synergies": ["과거인"],
+      "active": false
+    },
+    {
+      "id": "common_sea_dragon",
+      "name": "해룡",
+      "tier": "일반",
+      "price": 1,
+      "effect": "라운드 동안 강탈당하지 않으면 5G를 얻고, 첫 강탈을 무효화합니다.",
+      "description": "해룡. 사람 이외의 것과 반짝이는 것 들을 좋아한다.",
+      "image": "common_sea_dragon.webp",
+      "synergies": ["도파민즈", "마이러부"],
+      "active": false
+    },
+    {
+      "id": "common_cutest",
+      "name": "최강귀요미",
+      "tier": "일반",
+      "price": 1,
+      "effect": "효과가 없습니다.",
+      "description": "최강귀요미 본인이 인정했다",
+      "image": "common_cutest.webp",
+      "synergies": ["마이러부", "미츄"],
+      "active": false
+    },
 
-    {"id":"rare_kan","name":"칸","tier":"희귀","price":3,"effect":"도적 검거 시 5G를 얻습니다.","active":false},
-    {"id":"rare_abyss","name":"심연","tier":"희귀","price":3,"effect":"이 유저가 강탈당하면 도적의 강탈을 2턴간 봉인합니다.","active":false},
-    {"id":"rare_strange_food","name":"괴식","tier":"희귀","price":3,"effect":"이 유저가 강탈당하면 도적의 강탈을 2턴간 봉인합니다.","active":false},
-    {"id":"rare_ice_cream_smuggler","name":"아이스크림 밀매","tier":"희귀","price":3,"effect":"매 턴 1G를 얻습니다.","active":false},
-    {"id":"rare_luck","name":"행운","tier":"희귀","price":3,"effect":"매 턴 2G를 얻습니다.","active":false},
-    {"id":"rare_know_it_all","name":"다알아 박사님","tier":"희귀","price":3,"effect":"전설 인물 카드를 1회 무료로 리롤합니다.","active":false},
-    {"id":"rare_steel_helmet","name":"강철헬멧","tier":"희귀","price":3,"effect":"강탈과 살해를 무효화합니다.","active":false},
-    {"id":"rare_rainy_season","name":"장마","tier":"희귀","price":3,"effect":"2턴간 강탈과 살인마 행동을 막습니다.","active":true},
-    {"id":"rare_indulgence","name":"면죄부","tier":"희귀","price":3,"effect":"살인마일 때 검거당해도 생존하고 시민으로 복귀합니다.","active":false},
-    {"id":"rare_vampire","name":"흡혈","tier":"희귀","price":3,"effect":"도적에게 강탈당하면 도적의 골드 2G를 빼앗습니다.","active":false},
-    {"id":"rare_vampire_hunter","name":"뱀파이어헌터","tier":"희귀","price":3,"effect":"도적 또는 살인마 검거 성공 시 6G를 얻습니다.","active":false},
-    {"id":"rare_captains_spirit","name":"대장의 기백","tier":"희귀","price":3,"effect":"매 턴 무작위 1명에게서 1G를 강탈합니다.","active":false},
-    {"id":"rare_tough_sister","name":"쎈 누나","tier":"희귀","price":3,"effect":"지정한 1명에게서 2G를 강탈합니다.","active":false},
-    {"id":"rare_red_card","name":"레드카드","tier":"희귀","price":3,"effect":"턴을 강제 종료한 뒤 지정한 1명을 즉시 검거합니다. 시민이면 본인도 퇴장합니다.","active":true},
-    {"id":"rare_miser","name":"구두쇠","tier":"희귀","price":3,"effect":"라운드 종료 보상을 7G로 늘립니다.","active":false},
-    {"id":"rare_loafer","name":"백수","tier":"희귀","price":3,"effect":"효과가 없습니다.","active":false},
+    {
+      "id": "rare_kan",
+      "name": "칸",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "도적 검거 시 5G를 얻습니다.",
+      "description": "여기 저기서 대감님 취급을 받는다. 빨간 페도라가 잘 어울린다.",
+      "image": "rare_kan.webp",
+      "synergies": ["후열의밤", "제육즈", "대감님"],
+      "active": false
+    },
+    {
+      "id": "rare_abyss",
+      "name": "심연",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "이 유저가 강탈당하면 도적의 강탈을 2턴간 봉인합니다.",
+      "description": "ㅈ같은 짤을 난사했다.",
+      "image": "rare_abyss.webp",
+      "synergies": ["후열의밤", "도파민즈"],
+      "active": false
+    },
+    {
+      "id": "rare_strange_food",
+      "name": "괴식",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "이 유저가 강탈당하면 도적의 강탈을 2턴간 봉인합니다.",
+      "description": "도둑은 그녀가 만든 음식을 먹고 스턴에 걸렸다.",
+      "image": "rare_strange_food.webp",
+      "synergies": ["제육즈"],
+      "active": false
+    },
+    {
+      "id": "rare_ice_cream_smuggler",
+      "name": "아이스크림 밀매",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "매 턴 1G를 얻습니다.",
+      "description": "야심한 시간 무인 아이스크림 가게에서..",
+      "image": "rare_ice_cream_smuggler.webp",
+      "synergies": ["후열의밤", "미츄"],
+      "active": false
+    },
+    {
+      "id": "rare_luck",
+      "name": "행운",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "매 턴 2G를 얻습니다.",
+      "description": "행운의 네잎클로버.",
+      "image": "rare_luck.webp",
+      "synergies": ["마이러부"],
+      "active": false
+    },
+    {
+      "id": "rare_know_it_all",
+      "name": "다알아 박사님",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "전설 인물 카드를 1회 무료로 리롤합니다.",
+      "description": "모든걸 다아는 박사님 카드 리롤권도 안다",
+      "image": "rare_know_it_all.webp",
+      "synergies": ["후열의밤", "로열"],
+      "active": false
+    },
+    {
+      "id": "rare_steel_helmet",
+      "name": "강철헬멧",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "강탈과 살해를 무효화합니다.",
+      "description": "주머니를 털어도 아무것도 안나온다. 이미 돈은 다른 사람이 관리하기 때문이다...",
+      "image": "rare_steel_helmet.webp",
+      "synergies": ["후열의밤", "탱커"],
+      "active": false
+    },
+    {
+      "id": "rare_rainy_season",
+      "name": "장마",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "2턴간 강탈과 살인마 행동을 막습니다.",
+      "description": "장마를 일으켜 두 턴간 행동을 막는다",
+      "image": "rare_rainy_season.webp",
+      "synergies": ["후열의밤"],
+      "active": true
+    },
+    {
+      "id": "rare_indulgence",
+      "name": "면죄부",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "살인마일 때 검거당해도 생존하고 시민으로 복귀합니다.",
+      "description": "수녀님. 이제는 수녀호소인이나 짭수녀일지도 모른다",
+      "image": "rare_indulgence.webp",
+      "synergies": ["대감님", "로즈&펄"],
+      "active": false
+    },
+    {
+      "id": "rare_vampire",
+      "name": "흡혈",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "도적에게 강탈당하면 도적의 골드 2G를 빼앗습니다.",
+      "description": "뱀파이어. 외관은 여자지만 남자다.",
+      "image": "rare_vampire.webp",
+      "synergies": ["도파민즈"],
+      "active": false
+    },
+    {
+      "id": "rare_vampire_hunter",
+      "name": "뱀파이어헌터",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "도적 또는 살인마 검거 성공 시 6G를 얻습니다.",
+      "description": "뱀파이어 헌터. 성악을 잘 한다. ",
+      "image": "rare_vampire_hunter.webp",
+      "synergies": ["대감님", "골실즈"],
+      "active": false
+    },
+    {
+      "id": "rare_captains_spirit",
+      "name": "대장의 기백",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "매 턴 무작위 1명에게서 1G를 강탈합니다.",
+      "description": "149cm의 대장",
+      "image": "rare_captains_spirit.webp",
+      "synergies": [],
+      "active": false
+    },
+    {
+      "id": "rare_tough_sister",
+      "name": "쎈 누나",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "지정한 1명에게서 2G를 강탈합니다.",
+      "description": "털털한 형 같은 누나. 나쁜 여자다.",
+      "image": "rare_tough_sister.webp",
+      "synergies": ["제육즈"],
+      "active": false
+    },
+    {
+      "id": "rare_red_card",
+      "name": "레드카드",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "턴을 강제 종료한 뒤 지정한 1명을 즉시 검거합니다. 시민이면 본인도 퇴장합니다.",
+      "description": "축구를 좋아하는 뱁새. 독일에서 살다 왔다.",
+      "image": "rare_red_card.webp",
+      "synergies": ["대감님", "골실즈"],
+      "active": true
+    },
+    {
+      "id": "rare_miser",
+      "name": "탐관오리",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "라운드 종료 보상을 7G로 늘립니다.",
+      "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
+      "image": "rare_miser.webp",
+      "synergies": ["과거인"],
+      "active": false
+    },
+    {
+      "id": "rare_loafer",
+      "name": "백수",
+      "tier": "희귀",
+      "price": 3,
+      "effect": "효과가 없습니다.",
+      "description": "백수. 세금을 내지 않아도 된다.",
+      "image": "rare_loafer.webp",
+      "synergies": ["후열의밤", "로열"],
+      "active": false
+    },
 
-    {"id":"legendary_kan","name":"칸","tier":"전설","price":5,"effect":"도적 검거 시 8G를 얻습니다.","active":false},
-    {"id":"legendary_abyss","name":"심연","tier":"전설","price":5,"effect":"이 유저가 강탈당하면 도적의 강탈을 3턴간 봉인합니다.","active":false},
-    {"id":"legendary_dubidu","name":"두비두","tier":"전설","price":5,"effect":"이 유저가 강탈당하면 도적의 강탈을 3턴간 봉인합니다.","active":false},
-    {"id":"legendary_strange_food","name":"괴식","tier":"전설","price":5,"effect":"이 유저가 강탈당하면 도적의 강탈을 3턴간 봉인합니다.","active":false},
-    {"id":"legendary_ice_cream_smuggler","name":"아이스크림 밀매","tier":"전설","price":5,"effect":"매 턴 2G를 얻습니다.","active":false},
-    {"id":"legendary_dukes_helper","name":"공작가의 조력","tier":"전설","price":5,"effect":"매 턴 2G를 얻습니다.","active":false},
-    {"id":"legendary_luck","name":"행운","tier":"전설","price":5,"effect":"매 턴 3G를 얻습니다.","active":false},
-    {"id":"legendary_witch","name":"마녀","tier":"전설","price":5,"effect":"즉시 라운드를 종료합니다. 전원은 3G를 받습니다.","active":true},
-    {"id":"legendary_rainy_season","name":"장마","tier":"전설","price":5,"effect":"3턴간 강탈과 살인마 행동을 막습니다.","active":true},
-    {"id":"legendary_werewolf","name":"늑대인간","tier":"전설","price":5,"effect":"3턴 이후 1회 암살할 수 있습니다.","active":false},
-    {"id":"legendary_vampire","name":"흡혈","tier":"전설","price":5,"effect":"도적에게 강탈당하면 도적의 골드 3G를 빼앗습니다.","active":false},
-    {"id":"legendary_vampire_hunter","name":"뱀파이어헌터","tier":"전설","price":5,"effect":"도적 또는 살인마 검거 성공 시 8G를 얻습니다.","active":false},
-    {"id":"legendary_miser","name":"구두쇠","tier":"전설","price":5,"effect":"라운드 종료 보상을 10G로 늘립니다.","active":false},
-    {"id":"legendary_loafer","name":"백수","tier":"전설","price":5,"effect":"효과가 없습니다.","active":false}
+    {
+      "id": "legendary_kan",
+      "name": "칸",
+      "tier": "전설",
+      "price": 5,
+      "effect": "도적 검거 시 8G를 얻습니다.",
+      "description": "칸이라는 별명을 그렇게 좋아하지 않는다. 오타쿠다.",
+      "image": "legendary_kan.webp",
+      "synergies": ["후열의밤", "로열", "제육즈", "대감님"],
+      "active": false
+    },
+    {
+      "id": "legendary_abyss",
+      "name": "심연",
+      "tier": "전설",
+      "price": 5,
+      "effect": "이 유저가 강탈당하면 도적의 강탈을 3턴간 봉인합니다.",
+      "description": "선택해라. 만약에...",
+      "image": "legendary_abyss.webp",
+      "synergies": ["후열의밤", "도파민즈"],
+      "active": false
+    },
+    {
+      "id": "legendary_dubidu",
+      "name": "두비두",
+      "tier": "전설",
+      "price": 5,
+      "effect": "이 유저가 강탈당하면 도적의 강탈을 3턴간 봉인합니다.",
+      "description": "그가 금지한 모든 음식이 들어갔다.",
+      "image": "legendary_dubidu.webp",
+      "synergies": ["후열의밤"],
+      "active": false
+    },
+    {
+      "id": "legendary_strange_food",
+      "name": "괴식",
+      "tier": "전설",
+      "price": 5,
+      "effect": "이 유저가 강탈당하면 도적의 강탈을 3턴간 봉인합니다.",
+      "description": "집들이에 초대됐다",
+      "image": "legendary_strange_food.webp",
+      "synergies": ["제육즈"],
+      "active": false
+    },
+    {
+      "id": "legendary_ice_cream_smuggler",
+      "name": "아이스크림 밀매",
+      "tier": "전설",
+      "price": 5,
+      "effect": "매 턴 2G를 얻습니다.",
+      "description": "이젠 베스킨라빈스다.",
+      "image": "legendary_ice_cream_smuggler.webp",
+      "synergies": ["후열의밤", "미츄"],
+      "active": false
+    },
+    {
+      "id": "legendary_dukes_helper",
+      "name": "공작가의 조력",
+      "tier": "전설",
+      "price": 5,
+      "effect": "매 턴 2G를 얻습니다.",
+      "description": "영국 공작가 넷째 딸.",
+      "image": "legendary_dukes_helper.webp",
+      "synergies": ["대감님", "로즈&펄"],
+      "active": false
+    },
+    {
+      "id": "legendary_luck",
+      "name": "행운",
+      "tier": "전설",
+      "price": 5,
+      "effect": "매 턴 3G를 얻습니다.",
+      "description": "행운의 네잎클로버 여자가 많이 꼬인다는 말이 있다.",
+      "image": "legendary_luck.webp",
+      "synergies": ["마이러부"],
+      "active": false
+    },
+    {
+      "id": "legendary_witch",
+      "name": "마녀",
+      "tier": "전설",
+      "price": 5,
+      "effect": "즉시 라운드를 종료합니다. 전원은 3G를 받습니다.",
+      "description": "재앙이 찾아온단 말이 있는 마녀. 골반이 부러졌다.",
+      "image": "legendary_witch.webp",
+      "synergies": ["후열의밤", "탱커", "통모"],
+      "active": true
+    },
+    {
+      "id": "legendary_rainy_season",
+      "name": "장마",
+      "tier": "전설",
+      "price": 5,
+      "effect": "3턴간 강탈과 살인마 행동을 막습니다.",
+      "description": "촉각슈트롤 입은 그들은 쉽게 움직이지 못한다.",
+      "image": "legendary_rainy_season.webp",
+      "synergies": ["후열의밤"],
+      "active": true
+    },
+    {
+      "id": "legendary_werewolf",
+      "name": "늑대인간",
+      "tier": "전설",
+      "price": 5,
+      "effect": "3턴 이후 1회 암살할 수 있습니다.",
+      "description": "외로운 늑대.",
+      "image": "legendary_werewolf.webp",
+      "synergies": ["후열의밤", "로열", "통모"],
+      "active": false
+    },
+    {
+      "id": "legendary_vampire",
+      "name": "흡혈",
+      "tier": "전설",
+      "price": 5,
+      "effect": "도적에게 강탈당하면 도적의 골드 3G를 빼앗습니다.",
+      "description": "뱀파이어. 외관은 여자지만 남자다. 속는 사람이 존재한다",
+      "image": "legendary_vampire.webp",
+      "synergies": ["도파민즈"],
+      "active": false
+    },
+    {
+      "id": "legendary_vampire_hunter",
+      "name": "뱀파이어헌터",
+      "tier": "전설",
+      "price": 5,
+      "effect": "도적 또는 살인마 검거 성공 시 8G를 얻습니다.",
+      "description": "뱀파이어 헌터. 늘 바쁘다.",
+      "image": "legendary_vampire_hunter.webp",
+      "synergies": ["대감님", "골실즈"],
+      "active": false
+    },
+    {
+      "id": "legendary_miser",
+      "name": "탐관오리",
+      "tier": "전설",
+      "price": 5,
+      "effect": "라운드 종료 보상을 10G로 늘립니다.",
+      "description": "옛날사람. 역사에 해박하고 탐관오리시절 꿍쳐놓은 돈이 분명히 있을 것이다.",
+      "image": "legendary_miser.webp",
+      "synergies": ["과거인"],
+      "active": false
+    },
+    {
+      "id": "legendary_loafer",
+      "name": "백수",
+      "tier": "전설",
+      "price": 5,
+      "effect": "효과가 없습니다.",
+      "description": "종이 탈을 쓰고 있다. 콘텐츠 제작이나 mc를 굉장히 잘한다.",
+      "image": "legendary_loafer.webp",
+      "synergies": ["후열의밤", "로열"],
+      "active": false
+    }
   ],
   "synergies": [
-    {"id":"night_shift","name":"후열의밤","cards":["칸","아이스크림 밀매","심연","장마","다알아 박사님","백수","강철헬멧","두비두","늑대인간","마녀"],"requirement":"2인부터"},
-    {"id":"royal","name":"로열","cards":["늑대인간","백수","다알아 박사님","칸"],"requirement":"4인 전원"},
-    {"id":"jeyukz","name":"제육즈","cards":["쎈 누나","스피드런","괴식","칸"],"requirement":"4인 전원"},
-    {"id":"daegam","name":"대감님","cards":["칸","레드카드","뱀파이어헌터","면죄부","공작가의 조력"],"requirement":"5인 전원"},
-    {"id":"dopamine","name":"도파민즈","cards":["흡혈","해룡","심연"],"requirement":"2인 / 3인"},
-    {"id":"tank","name":"탱커","cards":["강철헬멧","마녀","미래인"],"requirement":"2인 / 3인"},
-    {"id":"my_love","name":"마이러부","cards":["최강귀요미","해룡","행운"],"requirement":"2인 / 3인"},
-    {"id":"tongmo","name":"통모","cards":["마녀","늑대인간"],"requirement":"2인"},
-    {"id":"gold_sil","name":"골실즈","cards":["레드카드","뱀파이어헌터"],"requirement":"2인"},
-    {"id":"rose_pearl","name":"로즈&펄","cards":["면죄부","공작가의 조력"],"requirement":"2인"},
-    {"id":"michu","name":"미츄","cards":["최강귀요미","아이스크림 밀매"],"requirement":"2인"},
-    {"id":"two_jobs","name":"투잡러","cards":["미래인","변호사"],"requirement":"2인"},
-    {"id":"past_person","name":"과거인","cards":["구두쇠","(자칭)닌자"],"requirement":"2인"}
+    {
+      "id": "night_shift",
+      "name": "후열의밤",
+      "requirement": "2인부터"
+    },
+    {
+      "id": "royal",
+      "name": "로열",
+      "requirement": "4인 전원"
+    },
+    {
+      "id": "jeyukz",
+      "name": "제육즈",
+      "requirement": "4인 전원"
+    },
+    {
+      "id": "daegam",
+      "name": "대감님",
+      "requirement": "5인 전원"
+    },
+    {
+      "id": "dopamine",
+      "name": "도파민즈",
+      "requirement": "2인 / 3인"
+    },
+    {
+      "id": "tank",
+      "name": "탱커",
+      "requirement": "2인 / 3인"
+    },
+    {
+      "id": "my_love",
+      "name": "마이러부",
+      "requirement": "2인 / 3인"
+    },
+    {
+      "id": "tongmo",
+      "name": "통모",
+      "requirement": "2인"
+    },
+    {
+      "id": "gold_sil",
+      "name": "골실즈",
+      "requirement": "2인"
+    },
+    {
+      "id": "rose_pearl",
+      "name": "로즈&펄",
+      "requirement": "2인"
+    },
+    {
+      "id": "michu",
+      "name": "미츄",
+      "requirement": "2인"
+    },
+    {
+      "id": "two_jobs",
+      "name": "투잡러",
+      "requirement": "2인"
+    },
+    {
+      "id": "past_person",
+      "name": "과거인",
+      "requirement": "2인"
+    }
   ]
 }

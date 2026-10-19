@@ -1,10 +1,37 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&family=Noto+Serif+KR:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@font-face {
+  font-family: "RogueNest";
+  src:
+    url("./fonts/fonts.woff2") format("woff2"),
+    url("./fonts/fonts.ttf") format("truetype");
+  font-display: swap;
+}
+
+@theme {
+  --font-game: "RogueNest", system-ui, sans-serif;
+  --font-sans: var(--font-game);
+  --font-serif: var(--font-game);
+  --font-mono: var(--font-game);
+  --animate-page-in: page-in 400ms ease-out both;
+  --animate-fade-in-late: fade-in 200ms ease-out 700ms both;
+  --animate-fade-in: fade-in 250ms ease-out both;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes page-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
 
 :root {
-  font-family: 'DM Sans', 'Noto Sans KR', system-ui, sans-serif;
+  font-family: var(--font-game);
   color: #343229;
   background: #f5f2e9;
-  font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   --ink: #343229;
@@ -20,3 +47,20 @@ body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradie
 button, input, select { font: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #a15e3c; outline-offset: 2px; }
 ::selection { color: white; background: #975638; }
+
+/* 카드 확대: 누른 작은 카드 자리(--fly-x/y, --fly-scale)에서 앞면 그대로 출발해 한 바퀴 돌며 가운데로 날아온다. */
+.card-fly {
+  animation: card-fly 800ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes card-fly {
+  0% {
+    transform: translate(var(--fly-x, 0), var(--fly-y, 0)) scale(var(--fly-scale, 0.3)) rotateY(-360deg);
+  }
+  75% {
+    transform: translate(0, 0) scale(1.06) rotateY(12deg);
+  }
+  100% {
+    transform: translate(0, 0) scale(1) rotateY(0deg);
+  }
+}
