@@ -32,7 +32,10 @@ const TIER_TONE = {
   전설: "legendary",
 } as const;
 
-function characterCard(card: CardDefinition): GameCardContent {
+// 사용 버튼 상태. onActivate는 지금 사용할 수 있을 때만 넘긴다.
+type CardUse = { activated: boolean; onActivate?: () => void };
+
+function characterCard(card: CardDefinition, use?: CardUse): GameCardContent {
   return {
     layout: "character",
     title: `${card.name} (${card.tier})`,
@@ -42,9 +45,15 @@ function characterCard(card: CardDefinition): GameCardContent {
     description: card.description ?? undefined,
     effect: card.effect,
     hashtags: card.synergyTags,
-    // TODO: 액티브 카드 사용은 카드 효과 구현 때 연결한다. (토론 단계에서만, 사용 전 확인 창)
-    action: card.active
-      ? { label: "사용", disabled: true, onClick: () => {} }
+    // 사용 버튼: 토론 단계에서만, 라운드당 1회. 확인 창은 게임 화면에서 띄운다.
+    action: card.actionLabel
+      ? {
+          label: use?.activated
+            ? `${card.actionLabel} (사용함)`
+            : card.actionLabel,
+          disabled: !use?.onActivate || use.activated,
+          onClick: () => use?.onActivate?.(),
+        }
       : undefined,
   };
 }
@@ -90,6 +99,8 @@ export default function CardsPanel({
   card,
   revealed,
   onReveal,
+  activated,
+  onActivate,
   freeReroll = null,
 }: {
   role: Role | null;
@@ -99,14 +110,19 @@ export default function CardsPanel({
   revealed: boolean;
   // 공개할 수 있을 때만 넘긴다.
   onReveal?: () => void;
+  // 이번 라운드에 카드 사용 효과를 썼는지
+  activated: boolean;
+  // 지금 카드를 사용할 수 있을 때만 넘긴다.
+  onActivate?: () => void;
   // 무료로 다시 뽑을 수 있을 때만 넘긴다. 없으면 다시 뽑기 버튼은 비활성.
   // TODO: 인물 카드 구현 때 아래 두 경우에 연결한다.
   //  - 다알아 박사님 보유 (일반 → 희귀, 희귀 → 전설 1회)
   //  - 과거인 시너지 (다음 라운드 인물 카드 1회 무료)
   freeReroll?: { onClick: () => void } | null;
 }) {
+  // 확대해서 보는 카드. 내용은 매번 최신 상태로 다시 만든다(사용 버튼 활성 여부 등).
   const [openCard, setOpenCard] = useState<{
-    card: GameCardContent;
+    kind: "role" | "held";
     origin: DOMRect | null;
   } | null>(null);
   const closeCard = useCallback(() => setOpenCard(null), []);
@@ -114,14 +130,24 @@ export default function CardsPanel({
   // 공개는 되돌릴 수 없으므로 한 번 더 확인한다. 카드가 바뀌면 확인 상태를 버린다.
   const [confirmingReveal, setConfirmingReveal] = useState(false);
   const jobCard = roleCard(role);
-  const heldCard = card ? characterCard(card) : EMPTY_CHARACTER_CARD;
+  // 사용 버튼을 누르면 확대 카드를 닫고 게임 화면의 확인 창으로 넘긴다.
+  const use: CardUse = {
+    activated,
+    onActivate: onActivate
+      ? () => {
+          setOpenCard(null);
+          onActivate();
+        }
+      : undefined,
+  };
+  const heldCard = card ? characterCard(card, use) : EMPTY_CHARACTER_CARD;
 
   // 새 카드를 뽑으면 확대 카드로 바로 보여준다.
   const [shownCardId, setShownCardId] = useState(card?.id ?? null);
   if ((card?.id ?? null) !== shownCardId) {
     setShownCardId(card?.id ?? null);
     setConfirmingReveal(false);
-    if (card) setOpenCard({ card: characterCard(card), origin: null });
+    if (card) setOpenCard({ kind: "held", origin: null });
   }
 
   return (
@@ -130,7 +156,7 @@ export default function CardsPanel({
         <MiniCard
           label="직업카드"
           card={jobCard}
-          onOpen={(origin) => setOpenCard({ card: jobCard, origin })}
+          onOpen={(origin) => setOpenCard({ kind: "role", origin })}
         >
           <button
             type="button"
@@ -149,7 +175,7 @@ export default function CardsPanel({
         <MiniCard
           label="인물카드"
           card={heldCard}
-          onOpen={(origin) => setOpenCard({ card: heldCard, origin })}
+          onOpen={(origin) => setOpenCard({ kind: "held", origin })}
         >
           {confirmingReveal && onReveal && !revealed ? (
             <div className="flex w-full flex-col gap-1">
@@ -189,7 +215,7 @@ export default function CardsPanel({
 
       {openCard && (
         <CardModal
-          card={openCard.card}
+          card={openCard.kind === "role" ? jobCard : heldCard}
           origin={openCard.origin}
           onClose={closeCard}
         />

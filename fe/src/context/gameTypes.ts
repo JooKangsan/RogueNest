@@ -23,7 +23,11 @@ export type VoteResult = {
     // 라운드 중 도적이 나가면 검거로 처리한다
     | "THIEF_LEFT"
     // 살인마가 밤에 도적을 처치했다
-    | "THIEF_KILLED";
+    | "THIEF_KILLED"
+    // 늑대인간이 도적을 암살했다
+    | "THIEF_ASSASSINATED"
+    // 마녀가 라운드를 끝냈다
+    | "WITCH";
   nicknames: string[];
 };
 
@@ -48,6 +52,8 @@ export type Room = {
   roundSummary: RoundSummary | null;
   // 지난밤 살인마에게 살해된 플레이어. 다음 턴에 공개한다.
   nightVictim: string | null;
+  // 장마로 강탈과 살인마 행동이 막힌 남은 턴 수
+  rainTurns: number;
 };
 
 // 라운드 종료 결과 (ROUND_END / GAME_OVER 단계에서만 온다)
@@ -71,6 +77,10 @@ export type CardDefinition = {
   image: string | null;
   active: boolean;
   synergyTags: string[];
+  // 카드 UI 하단 사용 버튼 이름. 사용할 수 없는 카드면 null
+  actionLabel: string | null;
+  // 사용할 때 대상을 골라야 하는지
+  actionTargeted: boolean;
 };
 
 export type SynergyDefinition = {
@@ -87,6 +97,9 @@ export type CardCatalog = {
 
 // 본인 투표. target=대상 닉네임, abstain=기권
 export type MyVote = { target: string | null; abstain: boolean };
+
+// 본인 보유 인물 카드. activated: 이번 라운드에 카드 사용 효과를 썼는지
+export type MyCard = { cardId: string | null; activated: boolean };
 
 // 본인에게만 오는 알림 (강탈 결과 등)
 export type Notice = { id: number; message: string };

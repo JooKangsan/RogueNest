@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatPanel from "../../components/ChatPanel";
 import { useGame } from "../../context/GameContext";
-import type { Player, Room, VoteResult } from "../../context/gameTypes";
+import type {
+  CardDefinition,
+  Player,
+  Room,
+  VoteResult,
+} from "../../context/gameTypes";
 import { getGameBackground } from "./backgrounds";
 import { useIsDesktop, useRemainingSeconds } from "./hooks";
 import CardsPanel from "./panels/CardsPanel";
@@ -68,11 +73,60 @@ function voteResultMessage(result: VoteResult) {
       return `${names}님이 광장에서 끌려나갔습니다`;
     case "THIEF_KILLED":
       return "살인마가 도적을 처치했습니다";
+    case "THIEF_ASSASSINATED":
+      return "늑대인간이 도적을 암살했습니다";
+    case "WITCH":
+      return `마녀 ${names}님이 라운드를 끝냈습니다`;
     case "THIEF_LEFT":
       return `도적 ${names}이(가) 도망쳐 검거 처리되었습니다`;
     case "NO_ONE":
       return "아무도 검거되지 않았습니다";
   }
+}
+
+// 인물 카드 사용 확인 창 (사용 전 1회)
+function ConfirmBox({
+  message,
+  note,
+  onConfirm,
+  onCancel,
+}: {
+  message: string;
+  note?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={message}
+        className="w-[88%] max-w-sm rounded-2xl border-4 border-[#5a3a22] bg-[#f6ecda] p-1.5 text-[#3b2413] shadow-2xl motion-safe:animate-page-in"
+      >
+        <div className="flex flex-col gap-3 rounded-xl border-2 border-[#dcc6a3] p-5 text-center">
+          <p className="text-xl font-bold">{message}</p>
+          {note && <p className="text-sm text-[#8a6440]">{note}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="min-h-11 rounded-lg bg-[#5a3a22] font-bold text-[#f6ecda] transition hover:brightness-110"
+              onClick={onConfirm}
+            >
+              사용
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-lg border-2 border-[#5a3a22] font-bold transition hover:bg-white"
+              onClick={onCancel}
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AnnouncementBox({ children }: { children: React.ReactNode }) {
@@ -118,7 +172,7 @@ export default function GamePage() {
     role,
     wallet,
     myVote,
-    myCardId,
+    myCard: myCardState,
     myKillTarget,
     notices,
     dismissNotice,
@@ -133,8 +187,15 @@ export default function GamePage() {
   const remainingSeconds = useRemainingSeconds(room?.phaseEndsAt ?? null);
   const isDesktop = useIsDesktop();
   const catalog = useCardCatalog();
-  const myCard = catalog?.cards.find((card) => card.id === myCardId) ?? null;
+  const myCard =
+    catalog?.cards.find((card) => card.id === myCardState?.cardId) ?? null;
   const [mobileTab, setMobileTab] = useState<MobileTab>("vote");
+  // 사용 중인 인물 카드: 대상 고르기 → 확인 창. key(라운드-턴)가 지금 턴과 같고 토론 중일 때만 유효하다.
+  const [activation, setActivation] = useState<{
+    key: string;
+    card: CardDefinition;
+    target: string | null;
+  } | null>(null);
 
   // 아직 대기 중인 방이면 대기 화면으로 돌려보낸다. (새로고침 후 재접속 등)
   const waiting = room?.phase === "WAITING";
@@ -168,8 +229,24 @@ export default function GamePage() {
   }
 
   // 살아 있는 살인마는 밤에 광장 캐릭터를 눌러 살해 대상을 고른다.
+  // 장마 중에는 살인마도 움직일 수 없다.
   const murdererActing =
-    room.phase === "NIGHT" && role === "MURDERER" && Boolean(myPlayer?.alive);
+    room.phase === "NIGHT" &&
+    role === "MURDERER" &&
+    Boolean(myPlayer?.alive) &&
+    room.rainTurns === 0;
+  const turnKey = `${room.round}-${room.turn}`;
+  const canActivate =
+    isConnected &&
+    room.phase === "DISCUSSION" &&
+    Boolean(myPlayer?.alive) &&
+    Boolean(myCard?.actionLabel) &&
+    !myCardState?.activated;
+  const currentActivation =
+    canActivate && activation?.key === turnKey ? activation : null;
+  const choosingTarget = Boolean(
+    currentActivation?.card.actionTargeted && !currentActivation.target,
+  );
   const panels = renderPanels(room);
 
   return (
@@ -268,6 +345,29 @@ export default function GamePage() {
             밤사이 {room.nightVictim}님이 살해당했습니다
           </p>
         )}
+        {room.rainTurns > 0 && (
+          <p
+            role="status"
+            className="rounded-full border-2 border-sky-900 bg-sky-950/85 px-4 py-1.5 text-center text-sky-100 shadow-lg"
+          >
+            ☔ 장마 {room.rainTurns}턴 · 강탈과 살인마 행동이 막혀 있어요
+          </p>
+        )}
+        {choosingTarget && currentActivation && (
+          <div className="pointer-events-auto flex items-center gap-3 rounded-full border-2 border-[#5a3a22] bg-[#f6ecda] py-1 pl-4 pr-1 text-[#3b2413] shadow-lg">
+            <span>
+              광장 캐릭터를 눌러 {currentActivation.card.actionLabel} 대상을
+              고르세요
+            </span>
+            <button
+              type="button"
+              className="min-h-11 rounded-full border-2 border-[#5a3a22] px-3 text-sm font-bold transition hover:bg-white"
+              onClick={() => setActivation(null)}
+            >
+              취소
+            </button>
+          </div>
+        )}
         {notices.map((notice) => (
           <NoticeToast
             key={notice.id}
@@ -324,6 +424,11 @@ export default function GamePage() {
           <p className="text-4xl text-amber-100 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             밤이 되었습니다
           </p>
+          {role === "MURDERER" && myPlayer?.alive && room.rainTurns > 0 && (
+            <p className="rounded-xl border-2 border-sky-900 bg-stone-900/85 px-5 py-3 text-sky-100">
+              장마 때문에 오늘 밤은 움직일 수 없어요
+            </p>
+          )}
           {murdererActing && (
             <div className="pointer-events-auto flex flex-col items-center gap-2 rounded-xl border-2 border-red-900 bg-stone-900/85 px-5 py-3 text-center text-red-100 shadow-xl">
               <p>
@@ -344,6 +449,24 @@ export default function GamePage() {
             </div>
           )}
         </div>
+      )}
+
+      {currentActivation && !choosingTarget && (
+        <ConfirmBox
+          message={`${
+            currentActivation.target ? `${currentActivation.target}님에게 ` : ""
+          }${currentActivation.card.name}의 "${currentActivation.card.actionLabel}"을(를) 사용할까요?`}
+          note={
+            currentActivation.card.active
+              ? "사용하면 카드가 모두에게 공개돼요."
+              : undefined
+          }
+          onConfirm={() => {
+            publish("activate", { target: currentActivation.target });
+            setActivation(null);
+          }}
+          onCancel={() => setActivation(null)}
+        />
       )}
 
       {room.roundSummary &&
@@ -414,6 +537,13 @@ export default function GamePage() {
           onReveal={
             canDrawCard && myCard ? () => publish("reveal", {}) : undefined
           }
+          activated={Boolean(myCardState?.activated)}
+          onActivate={
+            canActivate && myCard
+              ? () =>
+                  setActivation({ key: turnKey, card: myCard, target: null })
+              : undefined
+          }
         />
       ),
       shop: (
@@ -430,7 +560,20 @@ export default function GamePage() {
       ),
       progress: <ProgressPanel phase={currentRoom.phase} />,
       plaza: (layout: PlazaLayout) =>
-        murdererActing ? (
+        choosingTarget && currentActivation ? (
+          <PlazaRing
+            players={currentRoom.players}
+            myNickname={myPlayer?.nickname}
+            layout={layout}
+            voteTarget={null}
+            onVote={(target) => setActivation({ ...currentActivation, target })}
+            canTarget={(player) =>
+              player.alive && player.nickname !== myPlayer?.nickname
+            }
+            actionLabel={` ${currentActivation.card.actionLabel} 대상으로 지정`}
+            cardLabel={cardLabel}
+          />
+        ) : murdererActing ? (
           <PlazaRing
             players={currentRoom.players}
             myNickname={myPlayer?.nickname}

@@ -13,6 +13,7 @@ import type {
   Role,
   Room,
   RoomEvent,
+  MyCard,
   MyVote,
   Notice,
   Wallet,
@@ -25,7 +26,7 @@ type RoomConnectionOptions = {
   setRole: Dispatch<SetStateAction<Role | null>>;
   setWallet: Dispatch<SetStateAction<Wallet | null>>;
   setMyVote: Dispatch<SetStateAction<MyVote | null>>;
-  setMyCardId: Dispatch<SetStateAction<string | null>>;
+  setMyCard: Dispatch<SetStateAction<MyCard | null>>;
   setMyKillTarget: Dispatch<SetStateAction<string | null>>;
   setNotices: Dispatch<SetStateAction<Notice[]>>;
   setChat: Dispatch<SetStateAction<ChatMessage[]>>;
@@ -42,7 +43,7 @@ export function useRoomConnection({
   setRole,
   setWallet,
   setMyVote,
-  setMyCardId,
+  setMyCard,
   setMyKillTarget,
   setNotices,
   setChat,
@@ -102,7 +103,7 @@ export function useRoomConnection({
         setNickname(nickname);
         setMyNickname(nickname);
       } else if (event.type === "myCard") {
-        setMyCardId((event.payload as { cardId: string | null }).cardId);
+        setMyCard(event.payload as MyCard);
       } else if (event.type === "myKillTarget") {
         setMyKillTarget((event.payload as { target: string | null }).target);
       } else if (event.type === "notice") {
@@ -121,6 +122,13 @@ export function useRoomConnection({
         setError((event.payload as { message: string }).message);
       } else if (event.type === "room") {
         setRoom(event.payload as Room);
+      } else if (event.type === "announcement") {
+        // 방 전체 알림(장마, 레드카드, 암살 등)은 개인 알림과 같은 자리에 띄운다.
+        const { message } = event.payload as { message: string };
+        setNotices((notices) => [
+          ...notices.slice(-4),
+          { id: Date.now() + Math.random(), message },
+        ]);
       } else if (event.type === "chat") {
         setChat((messages) => [
           ...messages.slice(-99),
@@ -132,14 +140,14 @@ export function useRoomConnection({
           role: Role | null;
           wallet: Wallet | null;
           myVote: MyVote | null;
-          myCard: { cardId: string | null } | null;
+          myCard: MyCard | null;
           myKillTarget: { target: string | null } | null;
         };
         setRoom(snapshot.room);
         setRole(snapshot.role);
         setWallet(snapshot.wallet);
         setMyVote(snapshot.myVote);
-        setMyCardId(snapshot.myCard?.cardId ?? null);
+        setMyCard(snapshot.myCard);
         setMyKillTarget(snapshot.myKillTarget?.target ?? null);
       }
     },
@@ -151,7 +159,7 @@ export function useRoomConnection({
       setRole,
       setWallet,
       setMyVote,
-      setMyCardId,
+      setMyCard,
       setMyKillTarget,
       setNotices,
       setRoom,
@@ -179,7 +187,7 @@ export function useRoomConnection({
       setRole(null);
       setWallet(null);
       setMyVote(null);
-      setMyCardId(null);
+      setMyCard(null);
       setMyKillTarget(null);
       setNotices([]);
       setConnection("connecting");
@@ -220,7 +228,7 @@ export function useRoomConnection({
             setRole(null);
             setWallet(null);
             setMyVote(null);
-            setMyCardId(null);
+            setMyCard(null);
             setMyKillTarget(null);
             setNotices([]);
             setConnection("idle");
@@ -249,7 +257,7 @@ export function useRoomConnection({
       setRole,
       setWallet,
       setMyVote,
-      setMyCardId,
+      setMyCard,
       setMyKillTarget,
       setNotices,
       setError,
@@ -318,7 +326,7 @@ export function useRoomConnection({
     setRole(null);
     setWallet(null);
     setMyVote(null);
-    setMyCardId(null);
+    setMyCard(null);
     setMyKillTarget(null);
     setNotices([]);
     setChat([]);
@@ -335,7 +343,7 @@ export function useRoomConnection({
     setRoom,
     setWallet,
     setMyVote,
-    setMyCardId,
+    setMyCard,
     setMyKillTarget,
     setNotices,
   ]);

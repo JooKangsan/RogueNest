@@ -11,6 +11,7 @@ import { readStoredJoin } from "./gameSession";
 import type {
   ChatMessage,
   ConnectionState,
+  MyCard,
   MyVote,
   Notice,
   Player,
@@ -27,8 +28,8 @@ type GameContextValue = {
   role: Role | null;
   wallet: Wallet | null;
   myVote: MyVote | null;
-  // 보유한 인물 카드 id (본인만 앎)
-  myCardId: string | null;
+  // 보유한 인물 카드 (본인만 앎)
+  myCard: MyCard | null;
   // 살인마가 이번 밤에 고른 살해 대상 닉네임 (본인만 앎)
   myKillTarget: string | null;
   notices: Notice[];
@@ -60,7 +61,7 @@ export function GameProvider({ children }: PropsWithChildren) {
   const [role, setRole] = useState<Role | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [myVote, setMyVote] = useState<MyVote | null>(null);
-  const [myCardId, setMyCardId] = useState<string | null>(null);
+  const [myCard, setMyCard] = useState<MyCard | null>(null);
   const [myKillTarget, setMyKillTarget] = useState<string | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const dismissNotice = useCallback(
@@ -83,7 +84,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     setRole,
     setWallet,
     setMyVote,
-    setMyCardId,
+    setMyCard,
     setMyKillTarget,
     setNotices,
     setChat,
@@ -148,7 +149,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         role,
         wallet,
         myVote,
-        myCardId,
+        myCard,
         myKillTarget,
         notices,
         dismissNotice,
