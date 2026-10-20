@@ -34,8 +34,9 @@ public final class RoomDtos {
 	// voted: 이번 턴 투표(기권 포함)를 마쳤는지, votes: 이번 턴 받은 표 수.
 	// 누가 누구를 찍었는지는 공개하지 않는다.
 	// revealedCardId: 공개한 인물 카드. 비공개면 null
+	// inLobby: 대기실에 들어와 있는지 (게임 종료 후 "다시하기"를 누른 사람만 true)
 	public record PlayerView(String nickname, boolean host, boolean ready, boolean voted, int votes,
-			boolean alive, boolean onTrial, String revealedCardId) {
+			boolean alive, boolean onTrial, String revealedCardId, boolean inLobby) {
 	}
 
 	public record RoomView(
@@ -56,7 +57,9 @@ public final class RoomDtos {
 			// 장마로 강탈과 살인마 행동이 막힌 남은 턴 수
 			int rainTurns,
 			// 발동 중인 시너지와 참여자. 조합은 공개하고 효과는 공개하지 않는다.
-			List<ActiveSynergyView> synergies
+			List<ActiveSynergyView> synergies,
+			// 게임 종료 화면에서 최종 순위가 공개됐는지
+			boolean rankingShown
 	) {
 	}
 

@@ -367,16 +367,24 @@ public class RoomService {
 		synchronized (room) {
 			requireHost(room, session);
 			requireWaiting(room);
-			if (room.players.size() < minPlayers) {
+			// 인원과 준비는 대기실에 들어와 있는 사람만 센다. 결과 화면에 남은 사람은 시작하면 방에서 빠진다.
+			List<GameRoom.Player> lobby = room.players.values().stream().filter(player -> player.inLobby).toList();
+			if (lobby.size() < minPlayers) {
 				throw new RoomException(HttpStatus.CONFLICT, "NOT_ENOUGH_PLAYERS",
 						"게임 시작에는 " + minPlayers + "명 이상이 필요합니다.");
 			}
 			// 방장을 뺀 전원이 준비완료여야 시작할 수 있다.
-			boolean everyoneReady = room.players.values().stream()
+			boolean everyoneReady = lobby.stream()
 					.allMatch(player -> player.id.equals(room.hostPlayerId) || player.ready);
 			if (!everyoneReady) {
 				throw new RoomException(HttpStatus.CONFLICT, "NOT_EVERYONE_READY",
 						"모든 참가자가 준비완료해야 시작할 수 있습니다.");
+			}
+			for (GameRoom.Player outside : room.players.values().stream().filter(player -> !player.inLobby).toList()) {
+				messagingTemplate.getObject().convertAndSendToUser(outside.id, "/queue/private",
+						RoomDtos.RoomEvent.of("kicked", new RoomDtos.NoticeView("게임이 다시 시작되어 방에서 나왔어요.")));
+				cancelPendingDisconnect(outside.id);
+				removePlayer(room, outside.id);
 			}
 			room.backgroundIndex = secureRandom.nextInt(backgroundCount);
 			room.round = 0;
@@ -1490,13 +1498,15 @@ public class RoomService {
 				.toList();
 		room.roundSummary = new RoomDtos.RoundSummaryView(room.round, thiefCaught, lastRound, rows);
 		if (lastRound) {
+			// 게임이 끝나면 모두 결과 화면으로 간다. 대기실에는 각자 "다시하기"를 눌러야 들어온다.
+			room.players.values().forEach(player -> player.inLobby = false);
 			enterPhase(room, "GAME_OVER", roundEndSeconds, () -> returnToWaiting(room));
 		} else {
 			enterPhase(room, "ROUND_END", roundEndSeconds, () -> startRound(room));
 		}
 	}
 
-	// 라운드 종료/게임 종료 화면의 "다음 라운드" 버튼. 방장이 누르면 기다리지 않고 바로 넘어간다.
+	// 라운드 종료 화면의 "다음 라운드"(방장만). 누르면 기다리지 않고 바로 다음 라운드로 넘어간다.
 	public void skipRoundEnd(PlayerSession session, String roomName) {
 		GameRoom room = getMemberRoom(session, roomName);
 		synchronized (room) {
@@ -1511,8 +1521,42 @@ public class RoomService {
 		}
 	}
 
+	// 순위 화면의 "다시하기"(각자): 누른 사람만 대기실에 들어온다. 방이 아직 게임 종료 상태면 대기 상태로 돌린다.
+	public void rematch(PlayerSession session, String roomName) {
+		GameRoom room = getMemberRoom(session, roomName);
+		synchronized (room) {
+			if (!"GAME_OVER".equals(room.phase) && !"WAITING".equals(room.phase)) {
+				throw new RoomException(HttpStatus.CONFLICT, "NOT_GAME_OVER", "게임이 끝난 뒤에만 대기실로 돌아갈 수 있습니다.");
+			}
+			GameRoom.Player player = requirePlayer(session, room.name);
+			player.inLobby = true;
+			if ("GAME_OVER".equals(room.phase)) {
+				returnToWaiting(room);
+			} else {
+				broadcastRoom(room);
+			}
+		}
+	}
+
+	// 게임 종료 화면의 "다음"(방장만): 모두에게 최종 순위를 공개하고, 순위를 볼 시간을 다시 준다.
+	public void showRanking(PlayerSession session, String roomName) {
+		GameRoom room = getMemberRoom(session, roomName);
+		synchronized (room) {
+			requireHost(room, session);
+			if (!"GAME_OVER".equals(room.phase)) {
+				throw new RoomException(HttpStatus.CONFLICT, "NOT_GAME_OVER", "게임이 끝난 뒤에만 순위를 볼 수 있습니다.");
+			}
+			if (room.rankingShown) {
+				return;
+			}
+			room.rankingShown = true;
+			enterPhase(room, "GAME_OVER", roundEndSeconds, () -> returnToWaiting(room));
+		}
+	}
+
 	private void returnToWaiting(GameRoom room) {
 		room.roundSummary = null;
+		room.rankingShown = false;
 		room.phaseNext = null;
 		room.round = 0;
 		room.turn = 0;
@@ -1875,13 +1919,14 @@ public class RoomService {
 			players.add(new PlayerView(player.nickname,
 					player.id.equals(room.hostPlayerId), player.ready, player.vote != null, (int) votes,
 					player.alive, room.trialPlayerIds.contains(player.id),
-					player.cardRevealed ? player.cardId : null));
+					player.cardRevealed ? player.cardId : null, player.inLobby));
 		}
 		return new RoomView(room.name, room.phase, List.copyOf(players), room.config, room.backgroundIndex,
 				room.round, room.turn, room.phaseEndsAt, minPlayers, maxTurns,
 				"RESULT".equals(room.phase) ? room.lastVoteResult : null,
 				roundSummaryView(room), room.nightVictim, room.rainTurns,
-				"WAITING".equals(room.phase) ? List.of() : activeSynergies(room));
+				"WAITING".equals(room.phase) ? List.of() : activeSynergies(room),
+				room.rankingShown);
 	}
 
 	private RoomDtos.RoundSummaryView roundSummaryView(GameRoom room) {

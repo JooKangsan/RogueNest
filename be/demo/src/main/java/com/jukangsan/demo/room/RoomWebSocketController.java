@@ -97,6 +97,16 @@ public class RoomWebSocketController {
 		roomService.drawCard(session(principal), roomName, request.tier());
 	}
 
+	@MessageMapping("/rooms/{roomName}/ranking")
+	public void ranking(@DestinationVariable String roomName, Principal principal) {
+		roomService.showRanking(session(principal), roomName);
+	}
+
+	@MessageMapping("/rooms/{roomName}/rematch")
+	public void rematch(@DestinationVariable String roomName, Principal principal) {
+		roomService.rematch(session(principal), roomName);
+	}
+
 	@MessageMapping("/rooms/{roomName}/next")
 	public void next(@DestinationVariable String roomName, Principal principal) {
 		roomService.skipRoundEnd(session(principal), roomName);

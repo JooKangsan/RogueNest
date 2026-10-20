@@ -34,6 +34,8 @@ final class GameRoom {
 	Runnable phaseNext;
 	// 라운드 종료 결과 (ROUND_END / GAME_OVER 단계에서 보여준다)
 	RoomDtos.RoundSummaryView roundSummary;
+	// 게임 종료 화면에서 방장이 "다음"을 눌러 최종 순위를 공개했는지
+	boolean rankingShown;
 	// 지난밤 살인마에게 살해된 플레이어 닉네임. 다음 턴 시작 시 공개하고, 다음 밤이 오면 지운다.
 	String nightVictim;
 	// 도적의 강탈이 봉인된 남은 턴 수 (심연, 두비두, 괴식)
@@ -56,6 +58,8 @@ final class GameRoom {
 		final String id;
 		String nickname;
 		boolean ready;
+		// 대기실에 들어와 있는지. 게임이 끝나면 모두 false가 되고, 각자 "다시하기"를 눌러야 다시 들어온다.
+		boolean inLobby = true;
 		Role role;
 		int gold;
 		int coins;

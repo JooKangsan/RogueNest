@@ -902,4 +902,64 @@ class GameFlowTests {
 		assertThat(viewOf(roomName, "나").alive()).isTrue();
 		assertThat(viewOf(roomName, "다").alive()).isTrue();
 	}
+
+	@Test
+	void hostRevealsFinalRankingAndAnyoneCanReturnToWaiting() throws Exception {
+		String roomName = "Final Lobby";
+		roomService.createRoom(roomName, null);
+		List<RoomService.PlayerSession> sessions = new ArrayList<>();
+		for (String nickname : new String[] {"가", "나", "다", "라"}) {
+			sessions.add(roomService.authenticate(roomService.joinRoom(roomName, nickname, null).sessionToken()));
+		}
+		roomService.updateSettings(sessions.getFirst(), roomName, new RoomConfig(3, 50, 180));
+		readyAndStart(sessions, roomName);
+
+		// 3라운드 모두 도적을 잡아 빠르게 끝낸다.
+		for (int round = 1; round <= 3; round++) {
+			awaitPhase(roomName, "DISCUSSION");
+			RoomService.PlayerSession thief = sessionWithRole(sessions, Role.THIEF);
+			for (RoomService.PlayerSession session : sessions) {
+				roomService.castVote(session, roomName, nicknameOf(thief), false);
+			}
+			if (round < 3) {
+				awaitPhase(roomName, "ROUND_END");
+				roomService.skipRoundEnd(sessions.getFirst(), roomName);
+			}
+		}
+		var gameOver = awaitPhase(roomName, "GAME_OVER");
+		assertThat(gameOver.rankingShown()).isFalse();
+
+		// 순위 공개는 방장만
+		assertThatThrownBy(() -> roomService.showRanking(sessions.get(1), roomName))
+				.isInstanceOf(RoomException.class);
+		roomService.showRanking(sessions.getFirst(), roomName);
+		assertThat(roomService.getPublicRoom(roomName).rankingShown()).isTrue();
+
+		// 다시하기는 각자: 누른 사람만 대기실에 들어온다
+		roomService.rematch(sessions.get(2), roomName);
+		var waiting = roomService.getPublicRoom(roomName);
+		assertThat(waiting.phase()).isEqualTo("WAITING");
+		assertThat(waiting.rankingShown()).isFalse();
+		assertThat(waiting.players()).filteredOn(RoomDtos.PlayerView::inLobby)
+				.extracting(RoomDtos.PlayerView::nickname).containsExactly("다");
+
+		// 들어온 사람(다, 가, 나)이 최소 인원(4)보다 적으면 시작할 수 없다
+		roomService.rematch(sessions.getFirst(), roomName);
+		roomService.rematch(sessions.get(1), roomName);
+		assertThatThrownBy(() -> roomService.startGame(sessions.getFirst(), roomName))
+				.isInstanceOf(RoomException.class);
+
+		// 새로 들어온 "마"까지 4명이 되면, "라"가 결과 화면에 남아 있어도 시작하고 "라"는 방에서 빠진다
+		RoomService.PlayerSession newcomer = roomService.authenticate(
+				roomService.joinRoom(roomName, "마", null).sessionToken());
+		for (RoomService.PlayerSession session : List.of(sessions.get(1), sessions.get(2), newcomer)) {
+			roomService.setReady(session, roomName, true);
+		}
+		roomService.startGame(sessions.getFirst(), roomName);
+
+		var started = roomService.getPublicRoom(roomName);
+		assertThat(started.phase()).isEqualTo("PREPARE");
+		assertThat(started.players()).extracting(RoomDtos.PlayerView::nickname)
+				.containsExactlyInAnyOrder("가", "나", "다", "마");
+	}
 }
