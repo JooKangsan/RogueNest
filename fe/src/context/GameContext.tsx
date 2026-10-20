@@ -18,6 +18,7 @@ import type {
   Player,
   Role,
   Room,
+  RoundSummary,
   Wallet,
 } from "./gameTypes";
 import { useRoomConnection } from "./useRoomConnection";
@@ -49,8 +50,15 @@ type GameContextValue = {
   createRoom: (roomName: string, password: string) => Promise<boolean>;
   joinRoom: (roomName: string, password: string) => Promise<boolean>;
   publish: (action: string, body: unknown) => void;
+  // 마지막 게임의 최종 결과. 대기실로 돌아간 뒤에도 순위 창을 닫기 전까지 남는다.
+  finalResult: RoundSummary | null;
+  // summary: 마지막 라운드 결과 / ranking: 순위 창 / dismissed: 닫음
+  finalStage: FinalStage;
+  setFinalStage: (stage: FinalStage) => void;
   leaveRoom: () => Promise<void>;
 };
+
+export type FinalStage = "summary" | "ranking" | "dismissed";
 
 const GameContext = createContext<GameContextValue | null>(null);
 
@@ -147,6 +155,34 @@ export function GameProvider({ children }: PropsWithChildren) {
     }
   };
 
+  // 게임이 끝나면(GAME_OVER) 최종 결과를 붙잡아 둔다. 서버가 대기실로 돌려도 순위 창을 계속 보여주기 위해서다.
+  // 다음 게임이 시작되거나 방을 나가면 지운다.
+  const [finalResult, setFinalResult] = useState<RoundSummary | null>(null);
+  const [finalStage, setFinalStage] = useState<FinalStage>("summary");
+  if (room?.phase === "GAME_OVER" && room.roundSummary && !finalResult) {
+    setFinalResult(room.roundSummary);
+    setFinalStage(room.rankingShown ? "ranking" : "summary");
+  } else if (
+    room?.phase === "GAME_OVER" &&
+    room.rankingShown &&
+    finalStage === "summary"
+  ) {
+    // 방장이 "다음"을 누르면 모두의 화면이 순위로 넘어간다.
+    setFinalStage("ranking");
+  } else if (
+    finalResult &&
+    room?.phase === "WAITING" &&
+    finalStage === "summary"
+  ) {
+    // 방장이 "다음"을 누르기 전에 방이 대기 상태가 되면(자동 진행 등) 바로 순위를 보여준다.
+    setFinalStage("ranking");
+  } else if (
+    finalResult &&
+    (!room || (room.phase !== "GAME_OVER" && room.phase !== "WAITING"))
+  ) {
+    setFinalResult(null);
+  }
+
   const myPlayer = room?.players.find(
     (player) => player.nickname === myNickname,
   );
@@ -177,6 +213,9 @@ export function GameProvider({ children }: PropsWithChildren) {
         createRoom,
         joinRoom,
         publish,
+        finalResult,
+        finalStage,
+        setFinalStage,
         leaveRoom: disconnectFromRoom,
       }}
     >

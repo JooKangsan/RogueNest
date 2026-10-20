@@ -5,6 +5,7 @@ import HoodCharacter from "../../components/HoodCharacter";
 import { avatarColor } from "../../components/avatarColor";
 import ChatPanel from "../../components/ChatPanel";
 import ConnectingScreen from "../../components/ConnectingScreen";
+import FinalRankingPanel from "../../components/FinalRankingPanel";
 import { NumberSetting } from "../../components/NumberSetting";
 import RoomSettingsModal from "../../components/RoomSettingsModal";
 import SquareButton from "../../components/SquareButton";
@@ -61,6 +62,9 @@ export default function WaitingPage() {
     publish,
     leaveRoom,
     setError,
+    finalResult,
+    finalStage,
+    setFinalStage,
   } = useGame();
   const [roomInfoOpen, setRoomInfoOpen] = useState(false);
 
@@ -81,6 +85,16 @@ export default function WaitingPage() {
 
   const closeRoomInfo = useCallback(() => setRoomInfoOpen(false), []);
 
+  // 순위 창 없이 대기실에 왔는데(새로고침 등) 아직 대기실에 안 들어간 상태면 바로 들어간다.
+  const needsRematch =
+    room?.phase === "WAITING" &&
+    myPlayer?.inLobby === false &&
+    !(finalResult && finalStage !== "dismissed") &&
+    isConnected;
+  useEffect(() => {
+    if (needsRematch) publish("rematch", {});
+  }, [needsRematch, publish]);
+
   if (!room) {
     return (
       <ConnectingScreen
@@ -97,13 +111,20 @@ export default function WaitingPage() {
   }
 
   const isHost = Boolean(myPlayer?.host);
-  // 인원이 차고, 방장을 뺀 전원이 준비완료해야 시작할 수 있다. 서버도 같은 조건으로 거부한다.
-  const notReady = room.players.filter(
-    (player) => !player.host && !player.ready,
+  // 게임이 끝난 뒤에는 "다시하기"를 누른 사람만 대기실에 보인다. 색은 입장 순서대로라 원래 순번을 유지한다.
+  const lobbyPlayers = room.players
+    .map((player, index) => ({ player, index }))
+    .filter(({ player }) => player.inLobby);
+  // 아직 결과 화면에 남아 있는 사람
+  const outsideCount = room.players.length - lobbyPlayers.length;
+  // 대기실에 들어온 사람이 최소 인원 이상이고, 그중 방장을 뺀 전원이 준비완료해야 시작할 수 있다.
+  // 결과 화면에 남은 사람은 시작하면 방에서 빠진다. 서버도 같은 조건으로 판단한다.
+  const notReady = lobbyPlayers.filter(
+    ({ player }) => !player.host && !player.ready,
   );
-  const enoughPlayers = room.players.length >= room.minPlayers;
+  const enoughPlayers = lobbyPlayers.length >= room.minPlayers;
   const canStart = enoughPlayers && notReady.length === 0;
-  const emptySlots = MAX_PLAYERS - room.players.length;
+  const emptySlots = MAX_PLAYERS - lobbyPlayers.length;
 
   return (
     <section
@@ -128,12 +149,12 @@ export default function WaitingPage() {
               >
                 대기인원{" "}
                 <span className="text-lg font-normal text-amber-900/70">
-                  {room.players.length}/{MAX_PLAYERS}
+                  {lobbyPlayers.length}/{MAX_PLAYERS}
                 </span>
               </h1>
             </div>
             <ul className="grid gap-2 sm:grid-cols-2">
-              {room.players.map((player, index) => (
+              {lobbyPlayers.map(({ player, index }) => (
                 <PlayerCard
                   key={player.nickname}
                   player={player}
@@ -239,8 +260,13 @@ export default function WaitingPage() {
                 {!canStart && (
                   <p className="text-center text-sm text-amber-950 [text-shadow:0_0_4px_rgb(255_251_235)]">
                     {!enoughPlayers
-                      ? `${room.minPlayers - room.players.length}명이 더 필요해요`
+                      ? `${room.minPlayers - lobbyPlayers.length}명이 더 필요해요`
                       : `${notReady.length}명이 아직 준비하지 않았어요`}
+                  </p>
+                )}
+                {outsideCount > 0 && (
+                  <p className="text-center text-xs text-amber-950/80 [text-shadow:0_0_4px_rgb(255_251_235)]">
+                    결과 화면에 남은 {outsideCount}명은 시작하면 방에서 빠져요
                   </p>
                 )}
               </>
@@ -273,6 +299,22 @@ export default function WaitingPage() {
             publish("nickname", { nickname });
           }}
           onClose={closeRoomInfo}
+        />
+      )}
+
+      {/* 방금 끝난 게임의 최종 순위. 닫기 전까지 대기실에서도 계속 보인다. */}
+      {finalResult && finalStage !== "dismissed" && (
+        <FinalRankingPanel
+          summary={finalResult}
+          myNickname={myPlayer?.nickname}
+          onMain={() => {
+            setFinalStage("dismissed");
+            void leaveRoom();
+          }}
+          onRematch={() => {
+            setFinalStage("dismissed");
+            publish("rematch", {});
+          }}
         />
       )}
     </section>

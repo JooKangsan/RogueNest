@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatPanel from "../../components/ChatPanel";
 import ConnectingScreen from "../../components/ConnectingScreen";
+import FinalRankingPanel from "../../components/FinalRankingPanel";
 import { useGame } from "../../context/GameContext";
 import type {
   Alert,
@@ -318,6 +319,9 @@ export default function GamePage() {
     error,
     publish,
     leaveRoom,
+    finalResult,
+    finalStage,
+    setFinalStage,
   } = useGame();
   const remainingSeconds = useRemainingSeconds(room?.phaseEndsAt ?? null);
   const isDesktop = useIsDesktop();
@@ -349,7 +353,10 @@ export default function GamePage() {
   } | null>(null);
 
   // 아직 대기 중인 방이면 대기 화면으로 돌려보낸다. (새로고침 후 재접속 등)
-  const waiting = room?.phase === "WAITING";
+  // 단, 게임이 끝나고 최종 순위를 보는 중이면 "다시하기"를 누를 때까지 이 화면에 남는다.
+  // (다른 사람이 다시하기를 눌러 방이 대기 상태가 되어도 끌려가지 않는다.)
+  const viewingRanking = Boolean(finalResult) && finalStage !== "dismissed";
+  const waiting = room?.phase === "WAITING" && !viewingRanking;
   useEffect(() => {
     if (waiting) navigate("/waiting", { replace: true });
   }, [navigate, waiting]);
@@ -700,7 +707,8 @@ export default function GamePage() {
       )}
 
       {room.roundSummary &&
-        (room.phase === "ROUND_END" || room.phase === "GAME_OVER") && (
+        (room.phase === "ROUND_END" ||
+          (room.phase === "GAME_OVER" && finalStage === "summary")) && (
           <RoundSummaryPanel
             summary={room.roundSummary}
             myNickname={myPlayer?.nickname}
@@ -708,9 +716,28 @@ export default function GamePage() {
             remainingSeconds={remainingSeconds}
             isConnected={isConnected}
             isHost={Boolean(myPlayer?.host)}
-            onNext={() => publish("next", {})}
+            onNext={() =>
+              publish(room.roundSummary?.finalRound ? "ranking" : "next", {})
+            }
           />
         )}
+
+      {finalResult && finalStage === "ranking" && (
+        <FinalRankingPanel
+          summary={finalResult}
+          myNickname={myPlayer?.nickname}
+          onMain={() => {
+            setFinalStage("dismissed");
+            void leaveRoom();
+          }}
+          onRematch={() => {
+            // 누른 사람만 대기실에 들어간다. 방이 아직 게임 종료 상태면 서버가 대기 상태로 돌린다.
+            // 아직 순위를 보는 다른 사람은 이 화면에 그대로 남고, 대기실 목록에도 보이지 않는다.
+            setFinalStage("dismissed");
+            publish("rematch", {});
+          }}
+        />
+      )}
     </section>
   );
 

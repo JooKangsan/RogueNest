@@ -63,6 +63,8 @@ export function useRoomConnection({
   const roomSubscriptionRef = useRef<StompSubscription | null>(null);
   // 방 이름이 바뀌면 이벤트 핸들러 안에서 다시 구독해야 하므로 ref를 거쳐 자기 자신을 참조한다.
   const handleRoomEventRef = useRef<(frame: IMessage) => void>(() => {});
+  // 서버가 방에서 내보냈을 때(다시 시작한 게임에서 빠짐) 나가기와 같은 정리를 하려고 참조해 둔다.
+  const leaveRoomRef = useRef<() => Promise<void>>(async () => {});
   const onFrame = useCallback(
     (frame: IMessage) => handleRoomEventRef.current(frame),
     [],
@@ -106,6 +108,9 @@ export function useRoomConnection({
         updateIdentity({ nickname });
         setNickname(nickname);
         setMyNickname(nickname);
+      } else if (event.type === "kicked") {
+        const { message } = event.payload as { message: string };
+        void leaveRoomRef.current().then(() => setError(message));
       } else if (event.type === "myCard") {
         setMyCard(event.payload as MyCard);
       } else if (event.type === "myKillTarget") {
@@ -372,6 +377,10 @@ export function useRoomConnection({
     setNotices,
     setAlerts,
   ]);
+
+  useEffect(() => {
+    leaveRoomRef.current = leaveRoom;
+  }, [leaveRoom]);
 
   return { connectToRoom, publish, leaveRoom };
 }

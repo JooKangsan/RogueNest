@@ -191,7 +191,7 @@ export default function PlazaRing({
               />
             </button>
             <span
-              className={`pointer-events-none absolute left-1/2 top-full mt-0.5 max-w-[180%] -translate-x-1/2 truncate whitespace-nowrap rounded-full px-2 text-xs ${
+              className={`pointer-events-none absolute left-1/2 top-full mt-0.5 max-w-[240%] -translate-x-1/2 truncate whitespace-nowrap rounded-full px-3 py-0.5 text-lg leading-tight ${
                 isMe
                   ? "bg-amber-400 font-bold text-stone-900"
                   : "bg-stone-900/75 text-amber-50"
@@ -214,7 +214,7 @@ export default function PlazaRing({
                     event.currentTarget.getBoundingClientRect(),
                   )
                 }
-                className="pointer-events-auto absolute left-1/2 top-full mt-5 max-w-[200%] -translate-x-1/2 truncate whitespace-nowrap rounded-md border border-[#5a3a22] bg-[#f6ecda] px-1.5 text-[11px] font-bold text-[#3b2413] shadow transition enabled:hover:-translate-y-0.5 enabled:hover:bg-white motion-safe:animate-page-in"
+                className="pointer-events-auto absolute left-1/2 top-full mt-9 max-w-[240%] -translate-x-1/2 truncate whitespace-nowrap rounded-md border border-[#5a3a22] bg-[#f6ecda] px-1.5 text-[11px] font-bold text-[#3b2413] shadow transition enabled:hover:-translate-y-0.5 enabled:hover:bg-white motion-safe:animate-page-in"
               >
                 🂠 {cardLabel(player.revealedCardId) ?? "인물 카드"}
               </button>

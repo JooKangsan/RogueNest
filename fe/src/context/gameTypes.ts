@@ -11,6 +11,8 @@ export type Player = {
   onTrial: boolean;
   // 공개한 인물 카드 id. 비공개면 null
   revealedCardId: string | null;
+  // 대기실에 들어와 있는지. 게임이 끝나면 각자 "다시하기"를 눌러야 다시 들어온다.
+  inLobby: boolean;
 };
 
 // 투표 결과 (RESULT 단계에서만 온다)
@@ -57,6 +59,8 @@ export type Room = {
   // 발동 중인 시너지와 참여자 닉네임. 효과는 공개하지 않는다.
   // 발동한 시너지만 지금 단계의 효과(effect)가 온다.
   synergies: { name: string; effect: string; nicknames: string[] }[];
+  // 게임 종료 화면에서 방장이 "다음"을 눌러 최종 순위를 공개했는지
+  rankingShown: boolean;
 };
 
 // 라운드 종료 결과 (ROUND_END / GAME_OVER 단계에서만 온다)
